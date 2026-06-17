@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_name: str = Field(default="SWYP TEAM2 SERVER", alias="APP_NAME")
     app_env: str = Field(default="local", alias="APP_ENV")
-    debug: bool = Field(default=True, alias="DEBUG")
+    debug: bool = Field(default=False, alias="DEBUG")
 
     database_url: str = Field(alias="DATABASE_URL")
 

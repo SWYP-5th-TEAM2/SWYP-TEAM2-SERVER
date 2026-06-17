@@ -57,6 +57,7 @@ def register_exception_handlers(app: FastAPI) -> None:
                 message=message,
                 data=None,
             ),
+            headers=getattr(exc, "headers", None),
         )
 
     @app.exception_handler(Exception)
