@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16
+    container_name: swyp-team2-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: swyp_team2
+    ports:
+      - "5432:5432"
+    volumes:
+      - swyp_team2_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  swyp_team2_postgres_data:
