@@ -4,7 +4,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.core.exceptions import AppException
+from app.core.exceptions.base import AppException
 from app.core.responses import error_response
 
 
@@ -33,7 +33,9 @@ def register_exception_handlers(app: FastAPI) -> None:
             content=error_response(
                 code="VALIDATION_ERROR",
                 message="요청 값이 올바르지 않습니다.",
-                data={"errors": jsonable_encoder(exc.errors())},
+                data={
+                    "errors": jsonable_encoder(exc.errors()),
+                },
             ),
         )
 
@@ -42,7 +44,12 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request,
         exc: StarletteHTTPException,
     ) -> JSONResponse:
-        message = exc.detail if isinstance(exc.detail, str) else "HTTP 요청 처리 중 오류가 발생했습니다."
+        message = (
+            exc.detail
+            if isinstance(exc.detail, str)
+            else "HTTP 요청 처리 중 오류가 발생했습니다."
+        )
+
         return JSONResponse(
             status_code=exc.status_code,
             content=error_response(
