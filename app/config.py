@@ -29,6 +29,23 @@ class Settings(BaseSettings):
     redis_db: int = Field(default=0, alias="REDIS_DB")
     redis_password: str = Field(alias="REDIS_PASSWORD")
 
+    # ===== Kakao OAuth =====
+    kakao_client_id: str = Field(alias="KAKAO_CLIENT_ID")
+    kakao_redirect_uri: str = Field(alias="KAKAO_REDIRECT_URI")
+    kakao_client_secret: str = Field(alias="KAKAO_CLIENT_SECRET")
+
+    # ===== Google OAuth =====
+    google_client_id: str = Field(alias="GOOGLE_CLIENT_ID")
+    google_redirect_uri: str = Field(alias="GOOGLE_REDIRECT_URI")
+    google_client_secret: str = Field(alias="GOOGLE_CLIENT_SECRET")
+
+    # ===== Apple OAuth =====
+    apple_team_id: str = Field(alias="APPLE_TEAM_ID")
+    apple_client_id: str = Field(alias="APPLE_CLIENT_ID")
+    apple_key_id: str = Field(alias="APPLE_KEY_ID")
+    apple_private_key: str = Field(alias="APPLE_PRIVATE_KEY")
+    apple_redirect_uri: str = Field(alias="APPLE_REDIRECT_URI")
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

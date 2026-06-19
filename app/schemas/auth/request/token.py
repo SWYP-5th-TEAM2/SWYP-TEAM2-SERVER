@@ -1,16 +1,16 @@
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from app.schemas.common import CamelModel
 
 
-class ReissueRequest(BaseModel):
+class ReissueRequest(CamelModel):
     refresh_token: str = Field(
-        alias="refreshToken",
         min_length=1,
         description="Refresh Token",
     )
 
-class LogoutRequest(BaseModel):
+class LogoutRequest(CamelModel):
     refresh_token: str = Field(
-        alias="refreshToken",
         min_length=1,
         description="Refresh Token",
     )

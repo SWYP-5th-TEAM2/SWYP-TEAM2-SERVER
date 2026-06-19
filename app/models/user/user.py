@@ -36,6 +36,12 @@ class User(Base, TimestampMixin):
         comment="Provider에서 제공된 식별자",
     )
 
+    nickname: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        comment="사용자 이름",
+    )
+
     email: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
