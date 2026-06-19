@@ -75,6 +75,20 @@ class InvalidTokenTypeException(UnauthorizedException):
             message="토큰 타입이 올바르지 않습니다.",
         )
 
+class RefreshTokenReusedException(UnauthorizedException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="REFRESH_TOKEN_REUSED",
+            message="이미 사용된 Refresh Token입니다.",
+        )
+
+class LoggedOutTokenException(UnauthorizedException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="LOGGED_OUT_TOKEN",
+            message="이미 로그아웃된 토큰입니다.",
+        )
+
 
 # 403 FORBIDDEN
 class BlockedUserException(ForbiddenException):

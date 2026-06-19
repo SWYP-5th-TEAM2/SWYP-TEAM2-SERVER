@@ -1,6 +1,7 @@
 from app.core.exceptions.base import AppException
 from app.core.exceptions.common import *
 from app.core.exceptions.auth import *
+from app.core.exceptions.external import *
 
 __all__ = [
     "AppException",
@@ -26,9 +27,14 @@ __all__ = [
     "TokenExpiredException",
     "InvalidTokenException",
     "InvalidTokenTypeException",
+    "RefreshTokenReusedException",
+    "LoggedOutTokenException",
     "BlockedUserException",
     "EmailAlreadyExistsException",
     "TokenIssueFailedException",
     "SocialUserInfoFetchFailedException",
-    "ExternalAuthServiceUnavailableException"
+    "ExternalAuthServiceUnavailableException",
+
+    # External Exceptions
+    "RedisUnavailableException",
 ]
