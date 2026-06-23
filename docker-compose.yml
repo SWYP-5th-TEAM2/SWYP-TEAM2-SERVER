@@ -12,5 +12,12 @@ services:
     volumes:
       - swyp_team2_postgres_data:/var/lib/postgresql/data
 
+  redis:
+    image: redis:7-alpine
+    container_name: swyp-team2-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
 volumes:
   swyp_team2_postgres_data:

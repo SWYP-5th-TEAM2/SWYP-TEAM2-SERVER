@@ -11,12 +11,40 @@ class Settings(BaseSettings):
 
     database_url: str = Field(alias="DATABASE_URL")
 
+    # ===== JWT =====
     jwt_secret_key: str = Field(alias="JWT_SECRET_KEY")
     jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
     access_token_expire_minutes: int = Field(
         default=30,
         alias="ACCESS_TOKEN_EXPIRE_MINUTES",
     )
+    refresh_token_expire_days: int = Field(
+        default=14,
+        alias="REFRESH_TOKEN_EXPIRE_DAYS",
+    )
+
+    # ===== Redis =====
+    redis_host: str = Field(alias="REDIS_HOST")
+    redis_port: int = Field(alias="REDIS_PORT")
+    redis_db: int = Field(default=0, alias="REDIS_DB")
+    redis_password: str = Field(alias="REDIS_PASSWORD")
+
+    # ===== Kakao OAuth =====
+    kakao_client_id: str = Field(alias="KAKAO_CLIENT_ID")
+    kakao_redirect_uri: str = Field(alias="KAKAO_REDIRECT_URI")
+    kakao_client_secret: str = Field(alias="KAKAO_CLIENT_SECRET")
+
+    # ===== Google OAuth =====
+    google_client_id: str = Field(alias="GOOGLE_CLIENT_ID")
+    google_redirect_uri: str = Field(alias="GOOGLE_REDIRECT_URI")
+    google_client_secret: str = Field(alias="GOOGLE_CLIENT_SECRET")
+
+    # ===== Apple OAuth =====
+    apple_team_id: str | None = Field(default=None, alias="APPLE_TEAM_ID")
+    apple_client_id: str | None = Field(default=None, alias="APPLE_CLIENT_ID")
+    apple_key_id: str | None = Field(default=None, alias="APPLE_KEY_ID")
+    apple_private_key: str | None = Field(default=None, alias="APPLE_PRIVATE_KEY")
+    apple_redirect_uri: str | None = Field(default=None, alias="APPLE_REDIRECT_URI")
 
     model_config = SettingsConfigDict(
         env_file=".env",

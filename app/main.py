@@ -1,15 +1,26 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from app.api.base.router import router as base_router
 from app.api.v1.router import router as v1_router
 from app.config import settings
 from app.core.exceptions.handlers import register_exception_handlers
+from app.core.redis import connect_redis, close_redis
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await connect_redis()
+    yield
+    await close_redis()
 
 
 def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.app_name,
         debug=settings.debug,
+        lifespan=lifespan,
     )
 
     register_exception_handlers(app)

@@ -2,7 +2,7 @@ from http import HTTPStatus
 
 from app.core.exceptions.base import AppException
 
-
+# 400 BAD REQUEST
 class BadRequestException(AppException):
     def __init__(
         self,
@@ -16,6 +16,7 @@ class BadRequestException(AppException):
         )
 
 
+# 401 UNAUTHORIZED
 class UnauthorizedException(AppException):
     def __init__(
         self,
@@ -29,6 +30,7 @@ class UnauthorizedException(AppException):
         )
 
 
+# 403 FORBIDDEN
 class ForbiddenException(AppException):
     def __init__(
         self,
@@ -42,6 +44,7 @@ class ForbiddenException(AppException):
         )
 
 
+# 404 NOT FOUND
 class NotFoundException(AppException):
     def __init__(
         self,
@@ -55,6 +58,7 @@ class NotFoundException(AppException):
         )
 
 
+# 409 CONFLICT
 class ConflictException(AppException):
     def __init__(
         self,
@@ -65,4 +69,45 @@ class ConflictException(AppException):
             code=code,
             message=message,
             status_code=HTTPStatus.CONFLICT,
+        )
+
+
+# 500 INTERNAL SERVER ERROR
+class InternalServerException(AppException):
+    def __init__(
+        self,
+        code: str = "INTERNAL_SERVER_ERROR",
+        message: str = "서버 내부 오류가 발생했습니다.",
+    ) -> None:
+        super().__init__(
+            code=code,
+            message=message,
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+        )
+
+
+# 502 BAD GATEWAY
+class BadGatewayException(AppException):
+    def __init__(
+        self,
+        code: str = "BAD_GATEWAY",
+        message: str = "외부 서비스 처리 중 오류가 발생했습니다.",
+    ) -> None:
+        super().__init__(
+            code=code,
+            message=message,
+            status_code=HTTPStatus.BAD_GATEWAY
+        )
+
+# 503 SERVICE UNAVAILABLE
+class ServiceUnavailableException(AppException):
+    def __init__(
+        self,
+        code: str = "SERVICE_UNAVAILABLE",
+        message: str = "일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.",
+    ) -> None:
+        super().__init__(
+            code=code,
+            message=message,
+            status_code=HTTPStatus.SERVICE_UNAVAILABLE,
         )
