@@ -53,9 +53,11 @@ async def login(
 )
 async def reissue_token(
     request: ReissueRequest,
+    db: Session = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
     tokens = await reissue_tokens(
+        db=db,
         redis=redis,
         refresh_token=request.refresh_token,
     )

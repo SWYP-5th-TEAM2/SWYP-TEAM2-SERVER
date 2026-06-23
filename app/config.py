@@ -40,11 +40,11 @@ class Settings(BaseSettings):
     google_client_secret: str = Field(alias="GOOGLE_CLIENT_SECRET")
 
     # ===== Apple OAuth =====
-    apple_team_id: str = Field(alias="APPLE_TEAM_ID")
-    apple_client_id: str = Field(alias="APPLE_CLIENT_ID")
-    apple_key_id: str = Field(alias="APPLE_KEY_ID")
-    apple_private_key: str = Field(alias="APPLE_PRIVATE_KEY")
-    apple_redirect_uri: str = Field(alias="APPLE_REDIRECT_URI")
+    apple_team_id: str | None = Field(default=None, alias="APPLE_TEAM_ID")
+    apple_client_id: str | None = Field(default=None, alias="APPLE_CLIENT_ID")
+    apple_key_id: str | None = Field(default=None, alias="APPLE_KEY_ID")
+    apple_private_key: str | None = Field(default=None, alias="APPLE_PRIVATE_KEY")
+    apple_redirect_uri: str | None = Field(default=None, alias="APPLE_REDIRECT_URI")
 
     model_config = SettingsConfigDict(
         env_file=".env",

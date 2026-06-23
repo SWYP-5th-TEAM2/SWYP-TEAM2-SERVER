@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 from uuid import UUID
 
 from redis.asyncio import Redis
@@ -9,6 +10,9 @@ from app.core.exceptions import InvalidTokenException
 
 REFRESH_SESSION_KEY_PREFIX = "refresh:session"
 ACCESS_BLACKLIST_KEY_PREFIX = "blacklist:access"
+
+_REDIS_SCRIPT_DIR = Path(__file__).parent / "redis_scripts"
+_UPDATE_REFRESH_SESSION_JTI_SCRIPT = (_REDIS_SCRIPT_DIR / "update_refresh_session_jti.lua").read_text()
 
 def _refresh_session_key(session_id: str) -> str:
     return f"{REFRESH_SESSION_KEY_PREFIX}:{session_id}"
@@ -79,14 +83,24 @@ async def update_refresh_session_jti(
     *,
     session_id: str,
     user_id: UUID | str,
+    old_jti: str,
     new_jti: str,
-) -> None:
-    await save_refresh_session(
-        redis,
-        session_id=session_id,
-        user_id=user_id,
-        current_jti=new_jti,
+) -> str:
+    key = _refresh_session_key(session_id)
+    ttl_seconds = _refresh_token_ttl_seconds()
+
+    # lua script 실행
+    result = await redis.eval(
+        _UPDATE_REFRESH_SESSION_JTI_SCRIPT,
+        1,
+        key,
+        str(user_id),
+        old_jti,
+        new_jti,
+        ttl_seconds,
     )
+
+    return result.decode() if isinstance(result, bytes) else result
 
 
 # refresh token - sid 삭제 (로그아웃)

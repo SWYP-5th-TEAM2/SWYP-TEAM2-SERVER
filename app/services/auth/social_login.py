@@ -1,4 +1,5 @@
 from redis.asyncio import Redis
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import SocialLoginFailedException, BlockedUserException
@@ -33,16 +34,28 @@ async def social_login(
     is_new_user = False
 
     if user is None:
-        user = create_user(
-            db=db,
-            provider=provider,
-            provider_id=oauth_user_info.provider_id,
-            email=oauth_user_info.email,
-            nickname=oauth_user_info.nickname
-        )
-        db.commit()
-        db.refresh(user)
-        is_new_user = True
+        try:
+            user = create_user(
+                db=db,
+                provider=provider,
+                provider_id=oauth_user_info.provider_id,
+                email=oauth_user_info.email,
+                nickname=oauth_user_info.nickname
+            )
+            db.commit()
+            db.refresh(user)
+            is_new_user = True
+        except IntegrityError:
+            db.rollback()
+            user = find_user_by_provider(
+                db=db,
+                provider=provider,
+                provider_id=oauth_user_info.provider_id,
+            )
+            if user is None:
+                raise SocialLoginFailedException()
+
+            is_new_user = False
 
     if user.status == UserAccountStatus.BLOCKED:
         raise BlockedUserException()
@@ -60,6 +73,9 @@ async def social_login(
         user_id=refresh_user_id,
         current_jti=refresh_jti,
     )
+    print("login refresh user id:", refresh_user_id)
+    print("login session id:", session_id)
+    print("login refresh jti:", refresh_jti)
 
     return LoginResponse(
         access_token=tokens.access_token,
