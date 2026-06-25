@@ -1,7 +1,7 @@
 import uuid
 from datetime import date
 
-from sqlalchemy import Enum, String, Date, Boolean, UniqueConstraint
+from sqlalchemy import Enum, String, Date, Boolean, UniqueConstraint, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -22,6 +22,18 @@ class User(Base, TimestampMixin):
         primary_key=True,
         default=uuid.uuid4,
         comment="사용자 ID",
+    )
+
+    profile_image_id: Mapped[uuid.UUID | None] = mapped_column(
+        PostgresUUID(as_uuid=True),
+        ForeignKey(
+            "images.id",
+            ondelete="SET NULL",
+            use_alter=True,
+            name="fk_users_profile_image_id",
+        ),
+        nullable=True,
+        comment="프로필 이미지 ID",
     )
 
     provider: Mapped[Provider] = mapped_column(
@@ -46,6 +58,12 @@ class User(Base, TimestampMixin):
         String(255),
         nullable=True,
         comment="Provider에서 제공된 이메일",
+    )
+
+    profile_image: Mapped[str | None] = mapped_column(
+        String(2048),
+        nullable=True,
+        comment="프로필 이미지 URL",
     )
 
     gender: Mapped[Gender | None] = mapped_column(
