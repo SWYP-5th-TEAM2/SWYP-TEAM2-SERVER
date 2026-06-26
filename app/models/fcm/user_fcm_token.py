@@ -32,7 +32,7 @@ class UserFcmToken(Base, TimestampMixin):
     )
 
     fcm_token: Mapped[str] = mapped_column(
-        String(255),
+        String(512),
         nullable=False,
         comment="FCM 토큰",
     )

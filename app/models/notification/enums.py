@@ -13,11 +13,4 @@ class NotificationTargetType(str, enum.Enum):
     PLAN = "PLAN"
     ROOM = "ROOM"
     PLACE = "PLACE"
-
-
-class NotificationViewType(str, enum.Enum):
-    RESPONSE = "RESPONSE"
-    STATUS = "STATUS"
-    TICKET = "TICKET"
-    PLACE_LIST = "PLACE_LIST"
-    DRAW = "DRAW"
+    VOTE = "VOTE"

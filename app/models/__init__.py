@@ -4,12 +4,7 @@ from app.models.image import Image, ImagePurpose
 from app.models.room import Room, RoomMember, RoomMemberRole
 from app.models.place import Place, PlaceStatus
 from app.models.plan import Plan, Vote, PlanStatus
-from app.models.notification import (
-    Notification,
-    NotificationTargetType,
-    NotificationType,
-    NotificationViewType,
-)
+from app.models.notification import Notification, NotificationTargetType, NotificationType
 from app.models.fcm import DeviceType, UserFcmToken
 from app.models.schedule import DayOfWeek, RecurringScheduleDay, RecurringScheduleGroup
 
@@ -28,7 +23,6 @@ __all__: list[str] = [
     "Notification",
     "NotificationType",
     "NotificationTargetType",
-    "NotificationViewType",
     "UserFcmToken",
     "DeviceType",
     "RecurringScheduleGroup",

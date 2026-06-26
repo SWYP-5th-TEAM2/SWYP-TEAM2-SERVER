@@ -1,13 +1,11 @@
 import uuid
-from datetime import date
-
-from sqlalchemy import Enum, String, Date, Boolean, UniqueConstraint, ForeignKey
+from sqlalchemy import Boolean, Enum, ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
 from app.models.mixins import TimestampMixin
-from app.models.user.enums import Provider, Gender, UserRole, UserAccountStatus
+from app.models.user.enums import Provider, UserRole, UserAccountStatus
 
 
 class User(Base, TimestampMixin):
@@ -58,24 +56,6 @@ class User(Base, TimestampMixin):
         String(255),
         nullable=True,
         comment="Provider에서 제공된 이메일",
-    )
-
-    profile_image: Mapped[str | None] = mapped_column(
-        String(2048),
-        nullable=True,
-        comment="프로필 이미지 URL",
-    )
-
-    gender: Mapped[Gender | None] = mapped_column(
-        Enum(Gender, name="gender"),
-        nullable=True,
-        comment="성별",
-    )
-
-    birthday: Mapped[date | None] = mapped_column(
-        Date,
-        nullable=True,
-        comment="생년월일",
     )
 
     role: Mapped[UserRole] = mapped_column(

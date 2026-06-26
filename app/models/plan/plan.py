@@ -20,26 +20,26 @@ class Plan(Base, TimestampMixin):
         comment="계획 ID",
     )
 
-    room_id: Mapped[uuid.UUID] = mapped_column(
+    room_id: Mapped[uuid.UUID | None] = mapped_column(
         PostgresUUID(as_uuid=True),
-        ForeignKey("rooms.id", ondelete="CASCADE"),
-        nullable=False,
+        ForeignKey("rooms.id", ondelete="SET NULL"),
+        nullable=True,
         index=True,
         comment="방 ID",
     )
 
-    place_id: Mapped[uuid.UUID] = mapped_column(
+    place_id: Mapped[uuid.UUID | None] = mapped_column(
         PostgresUUID(as_uuid=True),
-        ForeignKey("places.id", ondelete="RESTRICT"),
-        nullable=False,
+        ForeignKey("places.id", ondelete="SET NULL"),
+        nullable=True,
         index=True,
         comment="후보 장소 ID",
     )
 
-    creator_id: Mapped[uuid.UUID] = mapped_column(
+    creator_id: Mapped[uuid.UUID | None] = mapped_column(
         PostgresUUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
         index=True,
         comment="약속 생성자 ID",
     )
