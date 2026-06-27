@@ -2,7 +2,7 @@ app_name: mohaeng-server
 app_domain: api.mohaeng.cloud
 app_dir: /opt/mohaeng-server # 배포 디렉터리
 
-app_image: "{{ acr_login_server }}/mohaeng-server:manual"
+app_image: "{{ acr_login_server }}/mohaeng-server:release"
 app_port: 8000
 
 nginx_server_name: api.mohaeng.cloud
