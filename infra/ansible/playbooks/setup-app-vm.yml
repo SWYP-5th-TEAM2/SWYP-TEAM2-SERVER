@@ -1,0 +1,11 @@
+---
+- name: Setup App VM
+  hosts: app
+  become: true # sudo 권한
+
+  roles:
+    - common
+    - docker
+    - nginx
+    - app
+    - certbot
