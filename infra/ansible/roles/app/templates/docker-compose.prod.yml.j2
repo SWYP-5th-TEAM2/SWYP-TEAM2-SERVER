@@ -1,0 +1,25 @@
+services:
+  fastapi:
+    image: "{{ app_image }}"
+    container_name: "{{ app_name }}"
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "127.0.0.1:{{ app_port }}:8000"
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7
+    container_name: "{{ app_name }}-redis"
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:

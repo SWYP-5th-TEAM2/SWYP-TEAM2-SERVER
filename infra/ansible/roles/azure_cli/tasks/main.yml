@@ -1,0 +1,37 @@
+---
+- name: Create apt keyrings directory # APT key 디렉토리 생성
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Add Microsoft signing key # MS 공개 서명 키 다운로드
+  ansible.builtin.get_url:
+    url: https://packages.microsoft.com/keys/microsoft.asc
+    dest: /etc/apt/keyrings/microsoft.asc
+    mode: "0644"
+
+- name: Add Azure CLI apt repository # Azure CLI 패키지 저장소 등록
+  ansible.builtin.deb822_repository:
+    name: azure-cli
+    types:
+      - deb
+    uris: https://packages.microsoft.com/repos/azure-cli/
+    suites:
+      - "{{ ansible_facts['distribution_release'] }}"
+    components:
+      - main
+    architectures:
+      - amd64
+    signed_by: /etc/apt/keyrings/microsoft.asc
+    state: present
+
+- name: Install Azure CLI # Azure CLI 설치
+  ansible.builtin.apt:
+    name: azure-cli
+    state: present
+    update_cache: true
+
+- name: Check Azure CLI version # 설치 확인
+  ansible.builtin.command: az version
+  changed_when: false

@@ -1,0 +1,36 @@
+---
+- name: Update apt cache # 패키지 최신화
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600 # 1시간
+
+- name: Install common packages # 패키지 설치
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+      - unzip
+      - vim
+      - git
+      - ufw
+      - postgresql-client
+    state: present
+
+- name: Check current timezone # 서버 시간 확인
+  ansible.builtin.command: timedatectl show -p Timezone --value
+  register: current_timezone
+  changed_when: false
+
+- name: Set timezone # Asia/Seoul
+  ansible.builtin.command: timedatectl set-timezone "{{ timezone }}"
+  when: current_timezone.stdout != timezone
+
+- name: Create application directory # VM 배포 디렉터리 생한
+  ansible.builtin.file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"

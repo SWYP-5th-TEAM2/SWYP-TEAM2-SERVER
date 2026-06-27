@@ -1,0 +1,30 @@
+---
+- name: Install Certbot packages # Certbot 설치
+  ansible.builtin.apt:
+    name:
+      - certbot
+      - python3-certbot-nginx
+    state: present
+    update_cache: true
+
+- name: Issue Let's Encrypt certificate # 인증서 발급
+  ansible.builtin.command:
+    argv:
+      - certbot
+      - --nginx
+      - --non-interactive
+      - --agree-tos
+      - --redirect
+      - --email
+      - "{{ certbot_email }}"
+      - -d
+      - "{{ certbot_domain }}"
+  args:
+    creates: "/etc/letsencrypt/live/{{ certbot_domain }}/fullchain.pem"
+  notify: Reload Nginx
+
+- name: Enable Certbot renewal timer # 자동 갱신 활성화
+  ansible.builtin.systemd:
+    name: certbot.timer
+    enabled: true
+    state: started

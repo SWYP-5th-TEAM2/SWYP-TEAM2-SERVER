@@ -1,0 +1,39 @@
+---
+- name: Install Nginx # Nginx 설치
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+    update_cache: true
+
+- name: Remove default Nginx site # 기본 Nginx site 제거
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+
+- name: Check TLS certificate
+  ansible.builtin.stat:
+    path: "/etc/letsencrypt/live/{{ nginx_server_name }}/fullchain.pem"
+  register: nginx_tls_certificate
+
+- name: Configure Nginx site # Nginx 설정 생성
+  ansible.builtin.template:
+    src: "{{ 'app-https.conf.j2' if nginx_tls_certificate.stat.exists else 'app.conf.j2' }}"
+    dest: "/etc/nginx/sites-available/{{ app_name }}"
+    mode: "0644"
+
+- name: Enable Nginx site # Nginx site 활성화
+  ansible.builtin.file:
+    src: "/etc/nginx/sites-available/{{ app_name }}"
+    dest: "/etc/nginx/sites-enabled/{{ app_name }}"
+    state: link
+    force: true
+
+- name: Test Nginx configuration # Nginx 설정 테스트
+  ansible.builtin.command: nginx -t
+  changed_when: false
+
+- name: Enable and reload Nginx # Nginx 자동 시작 & reload
+  ansible.builtin.systemd:
+    name: nginx
+    enabled: true
+    state: reloaded
