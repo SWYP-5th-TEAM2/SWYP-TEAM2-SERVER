@@ -6,6 +6,7 @@
   roles:
     - common
     - docker
+    - azure_cli
     - nginx
     - app
     - certbot

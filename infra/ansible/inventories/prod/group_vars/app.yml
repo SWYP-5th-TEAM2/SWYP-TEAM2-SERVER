@@ -2,7 +2,7 @@ app_name: mohaeng-server
 app_domain: api.mohaeng.cloud
 app_dir: /opt/mohaeng-server # 배포 디렉터리
 
-app_image: mohaeng-server:local
+app_image: "{{ acr_login_server }}/mohaeng-server:manual"
 app_port: 8000
 
 nginx_server_name: api.mohaeng.cloud
@@ -12,3 +12,6 @@ timezone: Asia/Seoul
 
 certbot_domain: api.mohaeng.cloud
 certbot_email: "wldnjstj99@gmail.com"
+
+acr_name: mohaengacr
+acr_login_server: mohaengacr-a9cfdnd5e7c3gefw.azurecr.io

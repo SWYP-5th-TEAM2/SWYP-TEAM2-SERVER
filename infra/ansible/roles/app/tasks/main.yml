@@ -25,7 +25,33 @@
     msg: "{{ app_dir }}/.env 파일이 없습니다. 운영 환경변수 파일을 먼저 배치해야 합니다."
   when: not app_env_file.stat.exists
 
-- name: Start app containers # docker compose tlfgod
+- name: Login to Azure with managed identity # Azure cli 로그인
+  ansible.builtin.command:
+    argv:
+      - az
+      - login
+      - --identity
+      - --output
+      - none
+  changed_when: false
+
+- name: Login to Azure Container Registry # ACR 로그인
+  ansible.builtin.command:
+    argv:
+      - az
+      - acr
+      - login
+      - --name
+      - "{{ acr_name }}"
+  changed_when: false
+
+- name: Pull application image # image pull
+  community.docker.docker_compose_v2_pull:
+    project_src: "{{ app_dir }}"
+    services:
+      - fastapi
+
+- name: Start app containers # docker compose 실행
   community.docker.docker_compose_v2:
     project_src: "{{ app_dir }}"
     state: present
