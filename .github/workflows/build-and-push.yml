@@ -48,3 +48,46 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Login to Azure with OIDC
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy application to Azure VM
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          
+          DEPLOY_OUTPUT="$(
+            az vm run-command invoke \
+              --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+              --name "${{ vars.AZURE_VM_NAME }}" \
+              --command-id RunShellScript \
+              --scripts @infra/scripts/deploy.sh \
+              --parameters "${{ vars.ACR_NAME }}" "/opt/mohaeng-server" \
+              --query 'value[0].message' \
+              --output tsv
+          )"
+          
+          printf '%s\n' "$DEPLOY_OUTPUT"
+          
+          if ! grep -q 'DEPLOYMENT_SUCCEEDED' <<< "$DEPLOY_OUTPUT"; then
+            echo "VM deployment failed"
+            exit 1
+          fi
+
+      - name: Verify public health endpoint
+        run: |
+          curl --fail --silent --show-error --retry 5 --retry-delay 5 "${{ vars.APP_HEALTH_URL }}"
+
