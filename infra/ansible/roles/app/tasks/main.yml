@@ -1,0 +1,68 @@
+---
+- name: Create app directory # 앱 배포 디렉토리 생성
+  ansible.builtin.file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+
+- name: Deploy docker compose file # 로컬 Ansible 템플릿 파일을 VM에 배포
+  ansible.builtin.template:
+    src: docker-compose.prod.yml.j2
+    dest: "{{ app_dir }}/docker-compose.yml"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"
+
+- name: Check app env file exists # 운영 환경변수 파일 확인
+  ansible.builtin.stat:
+    path: "{{ app_dir }}/.env"
+  register: app_env_file
+
+- name: Fail if app env file is missing # 운영 환경변수 없는 경우 playbook 실패
+  ansible.builtin.fail:
+    msg: "{{ app_dir }}/.env 파일이 없습니다. 운영 환경변수 파일을 먼저 배치해야 합니다."
+  when: not app_env_file.stat.exists
+
+- name: Login to Azure with managed identity # Azure cli 로그인
+  ansible.builtin.command:
+    argv:
+      - az
+      - login
+      - --identity
+      - --output
+      - none
+  changed_when: false
+
+- name: Login to Azure Container Registry # ACR 로그인
+  ansible.builtin.command:
+    argv:
+      - az
+      - acr
+      - login
+      - --name
+      - "{{ acr_name }}"
+  changed_when: false
+
+- name: Pull application image # image pull
+  community.docker.docker_compose_v2_pull:
+    project_src: "{{ app_dir }}"
+    services:
+      - fastapi
+
+- name: Run database migration
+  community.docker.docker_compose_v2_run:
+    project_src: "{{ app_dir }}"
+    service: fastapi
+    argv:
+      - alembic
+      - upgrade
+      - head
+    cleanup: true
+    no_deps: true
+
+- name: Start app containers # docker compose 실행
+  community.docker.docker_compose_v2:
+    project_src: "{{ app_dir }}"
+    state: present

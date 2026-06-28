@@ -157,6 +157,8 @@ ENV/
 env.bak/
 venv.bak/
 
+prod.env
+
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -220,3 +222,8 @@ __marimo__/
 # JetBrains IDE
 .idea/
 *.iml
+
+infra/ansible/inventories/*/hosts.ini
+
+*.pem
+*.key
