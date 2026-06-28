@@ -4,11 +4,9 @@ from app.schemas.common import CamelModel
 
 
 class SaveFcmTokenRequest(CamelModel):
-    fcm_token: str | None = Field(
+    fcm_token: str = Field(
         min_length=1,
-        default=None,
     )
-    device_type: str | None = Field(
+    device_type: str = Field(
         min_length=1,
-        default=None,
     )

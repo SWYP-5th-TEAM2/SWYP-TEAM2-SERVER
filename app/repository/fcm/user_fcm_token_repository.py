@@ -28,6 +28,7 @@ def save_user_fcm_token(
         fcm_token=fcm_token,
     )
 
+    # 동일한 FCM 토큰은 중복 생성하지 않고 최신 사용자와 기기 정보로 활성화한다.
     if user_fcm_token is None:
         user_fcm_token = UserFcmToken(
             user_id=user_id,

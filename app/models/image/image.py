@@ -54,5 +54,6 @@ class Image(Base, TimestampMixin):
     image_purpose: Mapped[ImagePurpose] = mapped_column(
         Enum(ImagePurpose, name="image_purpose"),
         nullable=False,
+        default=ImagePurpose.ETC,
         comment="이미지 사용 목적",
     )

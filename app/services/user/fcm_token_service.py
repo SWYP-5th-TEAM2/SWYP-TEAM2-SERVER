@@ -45,9 +45,11 @@ def save_fcm_token(
     fcm_token: str | None,
     device_type: str | None,
 ) -> SaveFcmTokenResponse:
+    # 저장 전에 필수 값과 지원 기기 유형을 검증
     validated_fcm_token = _validate_fcm_token(fcm_token)
     validated_device_type = _parse_device_type(device_type)
 
+    # 유효한 access token이라도 비활성 계정에는 토큰을 등록하지 않는다.
     user = find_user_by_id(
         db=db,
         user_id=user_id,
@@ -59,6 +61,7 @@ def save_fcm_token(
     if user.status != UserAccountStatus.ACTIVE:
         raise ForbiddenException()
 
+    # fcm token 저장
     user_fcm_token = save_user_fcm_token(
         db=db,
         user_id=user_id,

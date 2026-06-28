@@ -46,6 +46,14 @@ __all__ = [
     "DeviceTypeMissingException",
     "UnsupportedDeviceTypeException",
     "UserNotFoundException",
+    "RequestBodyMissingException",
+    "ProfileUpdateFieldsMissingException",
+    "InvalidNicknameFormatException",
+    "NicknameTooLongException",
+    "NicknameContainsInvalidCharacterException",
+    "InvalidProfileImageUrlException",
+    "ProfileImageUrlNotAllowedException",
+    "ProfileUpdateFailedException",
 
     # External Exceptions
     "RedisUnavailableException",
