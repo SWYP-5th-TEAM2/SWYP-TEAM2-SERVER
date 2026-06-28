@@ -80,6 +80,10 @@ async def withdraw_user(
         ):
             raise UserAlreadyWithdrawnException()
 
+        # provider_id 마스킹 전에 소셜 연결 해제에 필요한 원본 값을 보관한다.
+        social_provider = user.provider
+        social_provider_id = user.provider_id
+
         # 탈퇴 사유는 사용자별 enum 목록으로 보존한다.
         create_user_withdrawal_reasons(
             db=db,
@@ -113,8 +117,8 @@ async def withdraw_user(
 
         # provider별 실제 연결 해제 로직
         await unlink_social_account(
-            provider=user.provider,
-            provider_id=user.provider_id,
+            provider=social_provider,
+            provider_id=social_provider_id,
         )
 
         # 로그아웃으로 처리하고 현재 access token도 즉시 폐기

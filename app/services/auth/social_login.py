@@ -20,13 +20,17 @@ async def social_login(
     redis: Redis,
     *,
     provider: Provider,
-    code: str,
+    token: str,
+    code: str | None,
 ) -> LoginResponse:
     oauth_client = get_oauth_client(provider)
 
-    oauth_user_info = await oauth_client.authenticate(code)
+    oauth_user_info = await oauth_client.authenticate_token(
+        token=token,
+        code=code,
+    )
 
-    if oauth_user_info.provider != provider:
+    if oauth_user_info is None or oauth_user_info.provider != provider:
         raise SocialLoginFailedException()
 
     user = find_user_by_provider(
@@ -80,9 +84,6 @@ async def social_login(
         user_id=refresh_user_id,
         current_jti=refresh_jti,
     )
-    print("login refresh user id:", refresh_user_id)
-    print("login session id:", session_id)
-    print("login refresh jti:", refresh_jti)
 
     return LoginResponse(
         access_token=tokens.access_token,

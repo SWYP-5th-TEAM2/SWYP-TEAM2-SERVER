@@ -117,5 +117,8 @@ def mark_user_as_withdrawn(
     withdrawn_at: datetime,
 ) -> None:
     user.status = UserAccountStatus.WITHDRAWN
+    # unique 제약은 유지하면서 기존 소셜 사용자 식별자를 복구할 수 없게 치환
+    user.provider_id = f"withdrawn:{user.id}"
+    user.email = f"withdrawn-{user.id}@deleted.invalid"
     user.profile_image_id = None
     user.deleted_at = withdrawn_at

@@ -23,12 +23,11 @@ def parse_provider(provider: str) -> Provider:
         raise UnsupportedProviderException()
 
 @router.post(
-    "/login/{provider}",
+    "/login",
     summary="소셜 로그인",
-    description="소셜로그인 제공자(kakao, google, apple) 인가 코드로 로그인\n신규 회원은 회원 등록을 진행합니다.\n",
+    description="모바일 SDK에서 발급받은 provider credential로 로그인합니다.\n신규 회원은 회원 등록을 진행합니다.\n",
 )
 async def login(
-    provider: str,
     request: SocialLoginRequest,
     db: Session = Depends(get_db),
     redis: Redis = Depends(get_redis),
@@ -36,7 +35,8 @@ async def login(
     login_response = await social_login(
         db=db,
         redis=redis,
-        provider=parse_provider(provider),
+        provider=parse_provider(request.provider),
+        token=request.token,
         code=request.code,
     )
 
