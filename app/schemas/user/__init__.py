@@ -15,4 +15,6 @@ __all__ = [
     "RecurringScheduleListResponse",
     "RecurringScheduleMutationResponse",
     "RecurringScheduleActivationResponse",
+    "UpdateNotificationSettingsRequest",
+    "NotificationSettingsResponse",
 ]

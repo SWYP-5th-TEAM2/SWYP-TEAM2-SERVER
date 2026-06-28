@@ -4,6 +4,7 @@ from app.core.exceptions.auth import *
 from app.core.exceptions.external import *
 from app.core.exceptions.user import *
 from app.core.exceptions.recurring_schedule import *
+from app.core.exceptions.notification_settings import *
 
 __all__ = [
     "AppException",
@@ -77,6 +78,13 @@ __all__ = [
     "RecurringScheduleCreateFailedException",
     "RecurringScheduleUpdateFailedException",
     "RecurringScheduleDeleteFailedException",
+
+    # Notification Settings Exceptions
+    "NotificationSettingsRequestBodyMissingException",
+    "UnsupportedNotificationSettingException",
+    "NotificationSettingsUpdateFieldsMissingException",
+    "NotificationSettingValueInvalidException",
+    "NotificationSettingsFailedException",
 
     # External Exceptions
     "RedisUnavailableException",
