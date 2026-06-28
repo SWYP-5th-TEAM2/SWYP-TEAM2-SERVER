@@ -3,6 +3,7 @@ from app.core.exceptions.common import *
 from app.core.exceptions.auth import *
 from app.core.exceptions.external import *
 from app.core.exceptions.user import *
+from app.core.exceptions.recurring_schedule import *
 
 __all__ = [
     "AppException",
@@ -54,6 +55,26 @@ __all__ = [
     "InvalidProfileImageUrlException",
     "ProfileImageUrlNotAllowedException",
     "ProfileUpdateFailedException",
+
+    # Recurring Schedule Exceptions
+    "RecurringScheduleIdInvalidException",
+    "RecurringScheduleRequestBodyMissingException",
+    "RecurringScheduleUpdateFieldsMissingException",
+    "RecurringScheduleTitleMissingException",
+    "RecurringScheduleTitleTooLongException",
+    "RecurringScheduleDaysMissingException",
+    "RecurringScheduleDayInvalidException",
+    "RecurringScheduleDaysDuplicatedException",
+    "RecurringScheduleStartTimeMissingException",
+    "RecurringScheduleEndTimeMissingException",
+    "RecurringScheduleTimeInvalidException",
+    "RecurringScheduleTimeRangeInvalidException",
+    "RecurringScheduleUserNotFoundException",
+    "RecurringScheduleNotFoundException",
+    "RecurringScheduleListFailedException",
+    "RecurringScheduleCreateFailedException",
+    "RecurringScheduleUpdateFailedException",
+    "RecurringScheduleDeleteFailedException",
 
     # External Exceptions
     "RedisUnavailableException",

@@ -1,8 +1,13 @@
 from app.services.user.fcm_token_service import *
 from app.services.user.profile_service import *
+from app.services.user.recurring_schedule_service import *
 
 __all__ = [
     "save_fcm_token",
     "update_user_profile",
     "get_user_profile",
+    "get_recurring_schedules",
+    "create_recurring_schedule",
+    "update_recurring_schedule",
+    "delete_recurring_schedule",
 ]
