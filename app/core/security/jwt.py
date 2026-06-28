@@ -7,7 +7,13 @@ import jwt
 from jwt import ExpiredSignatureError, InvalidTokenError
 
 from app.config import settings
-from app.core.exceptions import TokenExpiredException, InvalidTokenException, InvalidTokenTypeException
+from app.core.exceptions import (
+    AccessTokenExpiredException,
+    InvalidAccessTokenException,
+    InvalidTokenException,
+    InvalidTokenTypeException,
+    TokenExpiredException,
+)
 from app.schemas.auth import TokenResponse
 
 
@@ -116,8 +122,14 @@ def _validate_token_type(
 def decode_access_token(
     token: str,
 ) -> dict[str, Any]:
-    payload = _decode_token(token)
-    _validate_token_type(payload, "access")
+    try:
+        payload = _decode_token(token)
+        _validate_token_type(payload, "access")
+    except TokenExpiredException:
+        raise AccessTokenExpiredException()
+    except (InvalidTokenException, InvalidTokenTypeException):
+        raise InvalidAccessTokenException()
+
     return payload
 
 

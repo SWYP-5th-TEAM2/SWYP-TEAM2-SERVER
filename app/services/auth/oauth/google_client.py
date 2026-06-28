@@ -1,4 +1,9 @@
+import asyncio
+
 import httpx
+import jwt
+from jwt import PyJWKClient
+from jwt.exceptions import InvalidTokenError, PyJWKClientError
 
 from app.config import settings
 from app.core.exceptions import SocialLoginFailedException, RequiredUserInfoMissingException
@@ -7,7 +12,13 @@ from app.services.auth.oauth.base import OAuthClient, OAuthUserInfo
 
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USER_INFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
+GOOGLE_JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs"
+GOOGLE_ISSUERS = {"accounts.google.com", "https://accounts.google.com"}
 GOOGLE_HTTP_TIMEOUT = 5.0
+google_jwk_client = PyJWKClient(
+    GOOGLE_JWKS_URL,
+    timeout=GOOGLE_HTTP_TIMEOUT,
+)
 
 class GoogleOAuthClient(OAuthClient):
     async def get_access_token(self, code: str) -> str:
@@ -72,3 +83,43 @@ class GoogleOAuthClient(OAuthClient):
             nickname=nickname if isinstance(nickname, str) else None,
         )
 
+    async def authenticate_token(
+        self,
+        token: str,
+        code: str | None = None,
+    ) -> OAuthUserInfo:
+        normalized_token = token.strip()
+        if not normalized_token:
+            raise SocialLoginFailedException()
+
+        try:
+            # PyJWKClient의 네트워크 조회는 동기 방식이므로 이벤트 루프 밖에서 실행한다.
+            signing_key = await asyncio.to_thread(
+                google_jwk_client.get_signing_key_from_jwt,
+                normalized_token,
+            )
+            payload = jwt.decode(
+                normalized_token,
+                signing_key.key,
+                algorithms=["RS256"],
+                audience=settings.google_client_id,
+            )
+        except (InvalidTokenError, PyJWKClientError, ValueError):
+            raise SocialLoginFailedException()
+
+        if payload.get("iss") not in GOOGLE_ISSUERS:
+            raise SocialLoginFailedException()
+
+        provider_id = payload.get("sub")
+        email = payload.get("email")
+        nickname = payload.get("name")
+
+        if provider_id is None:
+            raise RequiredUserInfoMissingException()
+
+        return OAuthUserInfo(
+            provider=Provider.GOOGLE,
+            provider_id=str(provider_id),
+            email=email if isinstance(email, str) else None,
+            nickname=nickname if isinstance(nickname, str) else None,
+        )
