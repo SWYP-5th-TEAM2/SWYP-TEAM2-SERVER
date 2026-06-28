@@ -51,6 +51,17 @@
     services:
       - fastapi
 
+- name: Run database migration
+  community.docker.docker_compose_v2_run:
+    project_src: "{{ app_dir }}"
+    service: fastapi
+    argv:
+      - alembic
+      - upgrade
+      - head
+    cleanup: true
+    no_deps: true
+
 - name: Start app containers # docker compose 실행
   community.docker.docker_compose_v2:
     project_src: "{{ app_dir }}"

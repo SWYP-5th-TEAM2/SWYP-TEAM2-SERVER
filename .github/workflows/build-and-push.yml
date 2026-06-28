@@ -1,4 +1,7 @@
 name: Build and Push Image
+concurrency:
+  group: deploy-release
+  cancel-in-progress: false
 
 on:
   push:
@@ -51,7 +54,7 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 100
 
     steps:
       - name: Checkout repository
@@ -75,7 +78,10 @@ jobs:
               --name "${{ vars.AZURE_VM_NAME }}" \
               --command-id RunShellScript \
               --scripts @infra/scripts/deploy.sh \
-              --parameters "${{ vars.ACR_NAME }}" "/opt/mohaeng-server" \
+              --parameters \
+                "${{ vars.ACR_NAME }}" \
+                "/opt/mohaeng-server" \
+                "${{ vars.ACR_LOGIN_SERVER }}/${{ vars.ACR_IMAGE_NAME }}:${{ github.sha }}" \
               --query 'value[0].message' \
               --output tsv
           )"

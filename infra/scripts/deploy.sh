@@ -8,7 +8,21 @@ set -Eeuo pipefail
 
 ACR_NAME="${1:?ACR name is required}"
 APP_DIR="${2:-/opt/mohaeng-server}"
+NEW_IMAGE_REF="${3:?Image reference is required}"
 HEALTH_URL="http://127.0.0.1:8000/api/health"
+IMAGE_TAG="${NEW_IMAGE_REF##*:}"
+
+if [[ ! "$IMAGE_TAG" =~ ^[0-9a-f]{40}$ ]]; then
+  echo "Invalid Git commit SHA: $IMAGE_TAG" >&2
+  exit 1
+fi
+
+exec 9>/var/lock/mohaeng-deploy.lock
+
+if ! flock -n 9; then
+  echo "Another deployment is already running." >&2
+  exit 1
+fi
 
 CURRENT_CONTAINER_ID=""
 PREVIOUS_IMAGE_ID=""
@@ -47,6 +61,8 @@ rollback() {
     return 1
   fi
 
+  export DEPLOY_IMAGE="$IMAGE_REF"
+
   if ! docker compose up -d --no-deps --force-recreate fastapi; then
     echo "Failed to recreate the previous container." >&2
     return 1
@@ -69,7 +85,9 @@ rollback() {
 az login --identity --output none
 az acr login --name "$ACR_NAME" --only-show-errors
 
-# 새 release 이미지 다운로드
+export DEPLOY_IMAGE="$NEW_IMAGE_REF"
+
+# 새 sha 이미지 다운로드
 docker compose pull fastapi
 
 # 새 이미지로 DB migration 실행

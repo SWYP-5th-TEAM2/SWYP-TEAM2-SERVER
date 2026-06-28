@@ -1,6 +1,6 @@
 services:
   fastapi:
-    image: "{{ app_image }}"
+    image: "${DEPLOY_IMAGE:-{{ app_image }}}"
     container_name: "{{ app_name }}"
     restart: unless-stopped
     env_file:
