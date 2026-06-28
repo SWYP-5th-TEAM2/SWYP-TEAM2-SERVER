@@ -7,11 +7,6 @@ class Provider(str, enum.Enum):
     APPLE = "APPLE"
 
 
-class Gender(str, enum.Enum):
-    MALE = "MALE"
-    FEMALE = "FEMALE"
-
-
 class UserRole(str, enum.Enum):
     USER = "USER"
     ADMIN = "ADMIN"
