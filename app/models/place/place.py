@@ -27,10 +27,13 @@ class Place(Base, TimestampMixin):
         comment="방 ID",
     )
 
-    user_id: Mapped[uuid.UUID] = mapped_column(
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
         PostgresUUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
+        ForeignKey(
+            "users.id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
         index=True,
         comment="장소를 등록한 사용자 ID",
     )

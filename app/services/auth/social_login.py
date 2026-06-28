@@ -2,7 +2,11 @@ from redis.asyncio import Redis
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import SocialLoginFailedException, BlockedUserException
+from app.core.exceptions import (
+    BlockedUserException,
+    ForbiddenException,
+    SocialLoginFailedException,
+)
 from app.core.security.jwt import create_tokens, decode_refresh_token, get_subject, get_session_id, get_jti
 from app.core.security.token_store import save_refresh_session
 from app.models.user.enums import Provider, UserAccountStatus
@@ -59,6 +63,9 @@ async def social_login(
 
     if user.status == UserAccountStatus.BLOCKED:
         raise BlockedUserException()
+
+    if user.status != UserAccountStatus.ACTIVE:
+        raise ForbiddenException()
 
     tokens = create_tokens(user.id)
 

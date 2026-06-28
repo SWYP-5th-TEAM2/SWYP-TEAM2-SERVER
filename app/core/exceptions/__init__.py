@@ -5,6 +5,7 @@ from app.core.exceptions.external import *
 from app.core.exceptions.user import *
 from app.core.exceptions.recurring_schedule import *
 from app.core.exceptions.notification_settings import *
+from app.core.exceptions.user_withdrawal import *
 
 __all__ = [
     "AppException",
@@ -85,6 +86,12 @@ __all__ = [
     "NotificationSettingsUpdateFieldsMissingException",
     "NotificationSettingValueInvalidException",
     "NotificationSettingsFailedException",
+
+    # User Withdrawal Exceptions
+    "UserWithdrawalRequestBodyMissingException",
+    "WithdrawalReasonMissingException",
+    "UserAlreadyWithdrawnException",
+    "UserWithdrawalFailedException",
 
     # External Exceptions
     "RedisUnavailableException",
