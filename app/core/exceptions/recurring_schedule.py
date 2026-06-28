@@ -29,6 +29,22 @@ class RecurringScheduleUpdateFieldsMissingException(BadRequestException):
         )
 
 
+class RecurringScheduleActivationMissingException(BadRequestException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="RECURRING_SCHEDULE_ACTIVATION_MISSING",
+            message="활성화 여부를 입력해주세요.",
+        )
+
+
+class RecurringScheduleActivationInvalidException(BadRequestException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="INVALID_RECURRING_SCHEDULE_ACTIVATION",
+            message="활성화 여부는 true 또는 false여야 합니다.",
+        )
+
+
 class RecurringScheduleTitleMissingException(BadRequestException):
     def __init__(self) -> None:
         super().__init__(

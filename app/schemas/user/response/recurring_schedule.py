@@ -18,3 +18,8 @@ class RecurringScheduleListResponse(CamelModel):
 
 class RecurringScheduleMutationResponse(CamelModel):
     recurring_schedule_id: UUID
+
+
+class RecurringScheduleActivationResponse(CamelModel):
+    recurring_schedule_id: UUID
+    is_active: bool

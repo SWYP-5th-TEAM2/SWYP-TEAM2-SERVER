@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import ConfigDict, Field
 
 from app.schemas.common import CamelModel
@@ -25,3 +27,16 @@ class UpdateRecurringScheduleRequest(CamelModel):
     days_of_week: list[str] | None = None
     start_time: str | None = None
     end_time: str | None = None
+
+
+class UpdateRecurringScheduleActivationRequest(CamelModel):
+    is_active: Any = None
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "required": ["isActive"],
+            "properties": {
+                "isActive": {"type": "boolean"},
+            },
+        },
+    )

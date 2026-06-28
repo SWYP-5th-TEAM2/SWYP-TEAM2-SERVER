@@ -9,5 +9,6 @@ __all__ = [
     "get_recurring_schedules",
     "create_recurring_schedule",
     "update_recurring_schedule",
+    "update_recurring_schedule_activation",
     "delete_recurring_schedule",
 ]

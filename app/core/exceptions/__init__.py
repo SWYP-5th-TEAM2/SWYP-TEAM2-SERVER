@@ -60,6 +60,8 @@ __all__ = [
     "RecurringScheduleIdInvalidException",
     "RecurringScheduleRequestBodyMissingException",
     "RecurringScheduleUpdateFieldsMissingException",
+    "RecurringScheduleActivationMissingException",
+    "RecurringScheduleActivationInvalidException",
     "RecurringScheduleTitleMissingException",
     "RecurringScheduleTitleTooLongException",
     "RecurringScheduleDaysMissingException",

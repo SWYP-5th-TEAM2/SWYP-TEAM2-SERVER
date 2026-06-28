@@ -8,6 +8,7 @@ from app.core.security.dependencies import get_current_user_id
 from app.database.session import get_db
 from app.schemas.user import (
     CreateRecurringScheduleRequest,
+    UpdateRecurringScheduleActivationRequest,
     UpdateRecurringScheduleRequest,
 )
 from app.services.user import (
@@ -15,6 +16,7 @@ from app.services.user import (
     delete_recurring_schedule,
     get_recurring_schedules,
     update_recurring_schedule,
+    update_recurring_schedule_activation,
 )
 
 router = APIRouter(
@@ -82,6 +84,29 @@ def update_my_recurring_schedule(
     return success_response(
         data=response,
         message="반복 일정 수정 성공",
+    )
+
+
+@router.patch(
+    "/{recurring_schedule_id}/activation",
+    summary="반복 일정 활성화 상태 변경",
+    description="로그인한 사용자가 등록한 반복 일정의 활성화 상태를 변경합니다.",
+)
+def update_my_recurring_schedule_activation(
+    recurring_schedule_id: str,
+    request: UpdateRecurringScheduleActivationRequest | None = Body(default=None),
+    db: Session = Depends(get_db),
+    user_id: UUID = Depends(get_current_user_id),
+):
+    response = update_recurring_schedule_activation(
+        db=db,
+        user_id=user_id,
+        recurring_schedule_id=recurring_schedule_id,
+        request=request,
+    )
+    return success_response(
+        data=response,
+        message="반복 일정 상태 변경 성공",
     )
 
 

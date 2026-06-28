@@ -10,7 +10,9 @@ __all__ = [
     "UserProfileResponse",
     "CreateRecurringScheduleRequest",
     "UpdateRecurringScheduleRequest",
+    "UpdateRecurringScheduleActivationRequest",
     "RecurringScheduleResponse",
     "RecurringScheduleListResponse",
     "RecurringScheduleMutationResponse",
+    "RecurringScheduleActivationResponse",
 ]

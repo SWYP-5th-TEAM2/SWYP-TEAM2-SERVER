@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import (
     ForbiddenException,
+    RecurringScheduleActivationInvalidException,
+    RecurringScheduleActivationMissingException,
     RecurringScheduleCreateFailedException,
     RecurringScheduleDayInvalidException,
     RecurringScheduleDaysDuplicatedException,
@@ -40,9 +42,11 @@ from app.repository.schedule import (
 from app.repository.user import find_user_by_id
 from app.schemas.user import (
     CreateRecurringScheduleRequest,
+    RecurringScheduleActivationResponse,
     RecurringScheduleListResponse,
     RecurringScheduleMutationResponse,
     RecurringScheduleResponse,
+    UpdateRecurringScheduleActivationRequest,
     UpdateRecurringScheduleRequest,
 )
 
@@ -287,6 +291,51 @@ def update_recurring_schedule(
 
         return RecurringScheduleMutationResponse(
             recurring_schedule_id=updated_schedule_id,
+        )
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise RecurringScheduleUpdateFailedException() from exc
+
+
+def update_recurring_schedule_activation(
+    db: Session,
+    *,
+    user_id: UUID,
+    recurring_schedule_id: str,
+    request: UpdateRecurringScheduleActivationRequest | None,
+) -> RecurringScheduleActivationResponse:
+    parsed_schedule_id = _parse_recurring_schedule_id(recurring_schedule_id)
+
+    if request is None:
+        raise RecurringScheduleRequestBodyMissingException()
+
+    # isActive가 생략된 경우와 null 또는 잘못된 타입으로 전달된 경우를 구분
+    if "is_active" not in request.model_fields_set:
+        raise RecurringScheduleActivationMissingException()
+
+    # bool("false")가 True가 되는 Python 변환을 피하고 실제 JSON boolean만 허용
+    if type(request.is_active) is not bool:
+        raise RecurringScheduleActivationInvalidException()
+
+    try:
+        _ensure_active_user(db, user_id)
+
+        recurring_schedule = find_recurring_schedule_group_by_id(
+            db=db,
+            user_id=user_id,
+            recurring_schedule_id=parsed_schedule_id,
+        )
+        if recurring_schedule is None:
+            raise RecurringScheduleNotFoundException()
+
+        recurring_schedule.is_enabled = request.is_active
+        updated_schedule_id = recurring_schedule.id
+        updated_is_active = request.is_active
+        db.commit()
+
+        return RecurringScheduleActivationResponse(
+            recurring_schedule_id=updated_schedule_id,
+            is_active=updated_is_active,
         )
     except SQLAlchemyError as exc:
         db.rollback()
