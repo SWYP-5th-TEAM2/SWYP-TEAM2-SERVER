@@ -2,6 +2,7 @@ from app.core.exceptions.base import AppException
 from app.core.exceptions.common import *
 from app.core.exceptions.auth import *
 from app.core.exceptions.external import *
+from app.core.exceptions.user import *
 
 __all__ = [
     "AppException",
@@ -24,8 +25,12 @@ __all__ = [
     "AuthorizationCodeExpiredException",
     "SocialLoginFailedException",
     "TokenMissingException",
+    "AuthorizationHeaderMissingException",
+    "AccessTokenMissingException",
     "TokenExpiredException",
     "InvalidTokenException",
+    "AccessTokenExpiredException",
+    "InvalidAccessTokenException",
     "InvalidTokenTypeException",
     "RefreshTokenReusedException",
     "LoggedOutTokenException",
@@ -34,6 +39,13 @@ __all__ = [
     "TokenIssueFailedException",
     "SocialUserInfoFetchFailedException",
     "ExternalAuthServiceUnavailableException",
+
+    # User Exceptions
+    "FcmTokenMissingException",
+    "FcmTokenBlankException",
+    "DeviceTypeMissingException",
+    "UnsupportedDeviceTypeException",
+    "UserNotFoundException",
 
     # External Exceptions
     "RedisUnavailableException",
