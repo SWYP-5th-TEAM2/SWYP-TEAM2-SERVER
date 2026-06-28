@@ -1,5 +1,5 @@
 # SQLAlchemy 모델이 추가되면 이 파일에서 import해 주세요.
-from app.models.user import User
+from app.models.user import User, UserWithdrawalReason
 from app.models.image import Image, ImagePurpose
 from app.models.room import Room, RoomMember, RoomMemberRole
 from app.models.place import Place, PlaceStatus
@@ -10,6 +10,7 @@ from app.models.schedule import DayOfWeek, RecurringScheduleDay, RecurringSchedu
 
 __all__: list[str] = [
     "User",
+    "UserWithdrawalReason",
     "Image",
     "ImagePurpose",
     "Room",

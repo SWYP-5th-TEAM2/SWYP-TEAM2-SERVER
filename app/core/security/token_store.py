@@ -112,6 +112,35 @@ async def delete_refresh_session(
     await redis.delete(_refresh_session_key(session_id))
 
 
+# 사용자 탈퇴 시 해당 사용자의 모든 기기 refresh session 삭제
+async def delete_refresh_sessions_by_user_id(
+    redis: Redis,
+    *,
+    user_id: UUID | str,
+) -> None:
+    target_user_id = str(user_id)
+    session_keys: list[str] = []
+
+    async for key in redis.scan_iter(
+        match=f"{REFRESH_SESSION_KEY_PREFIX}:*",
+        count=100,
+    ):
+        value = await redis.get(key)
+        if value is None:
+            continue
+
+        try:
+            session = json.loads(value)
+        except (TypeError, json.JSONDecodeError):
+            continue
+
+        if session.get("user_id") == target_user_id:
+            session_keys.append(str(key))
+
+    if session_keys:
+        await redis.delete(*session_keys)
+
+
 # access token - blacklist 등록 (로그아웃)
 async def blacklist_access_token(
     redis: Redis,

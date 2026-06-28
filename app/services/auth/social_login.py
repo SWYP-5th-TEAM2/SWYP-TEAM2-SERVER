@@ -2,7 +2,11 @@ from redis.asyncio import Redis
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import SocialLoginFailedException, BlockedUserException
+from app.core.exceptions import (
+    BlockedUserException,
+    ForbiddenException,
+    SocialLoginFailedException,
+)
 from app.core.security.jwt import create_tokens, decode_refresh_token, get_subject, get_session_id, get_jti
 from app.core.security.token_store import save_refresh_session
 from app.models.user.enums import Provider, UserAccountStatus
@@ -16,13 +20,17 @@ async def social_login(
     redis: Redis,
     *,
     provider: Provider,
-    code: str,
+    token: str,
+    code: str | None,
 ) -> LoginResponse:
     oauth_client = get_oauth_client(provider)
 
-    oauth_user_info = await oauth_client.authenticate(code)
+    oauth_user_info = await oauth_client.authenticate_token(
+        token=token,
+        code=code,
+    )
 
-    if oauth_user_info.provider != provider:
+    if oauth_user_info is None or oauth_user_info.provider != provider:
         raise SocialLoginFailedException()
 
     user = find_user_by_provider(
@@ -60,6 +68,9 @@ async def social_login(
     if user.status == UserAccountStatus.BLOCKED:
         raise BlockedUserException()
 
+    if user.status != UserAccountStatus.ACTIVE:
+        raise ForbiddenException()
+
     tokens = create_tokens(user.id)
 
     refresh_payload = decode_refresh_token(tokens.refresh_token)
@@ -73,9 +84,6 @@ async def social_login(
         user_id=refresh_user_id,
         current_jti=refresh_jti,
     )
-    print("login refresh user id:", refresh_user_id)
-    print("login session id:", session_id)
-    print("login refresh jti:", refresh_jti)
 
     return LoginResponse(
         access_token=tokens.access_token,

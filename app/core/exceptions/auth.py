@@ -54,6 +54,20 @@ class TokenMissingException(UnauthorizedException):
             message="인증 토큰이 필요합니다.",
         )
 
+class AuthorizationHeaderMissingException(UnauthorizedException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="AUTHORIZATION_HEADER_MISSING",
+            message="Authorization 헤더가 필요합니다.",
+        )
+
+class AccessTokenMissingException(UnauthorizedException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="ACCESS_TOKEN_MISSING",
+            message="액세스 토큰이 필요합니다.",
+        )
+
 class TokenExpiredException(UnauthorizedException):
     def __init__(self) -> None:
         super().__init__(
@@ -66,6 +80,20 @@ class InvalidTokenException(UnauthorizedException):
         super().__init__(
             code="INVALID_TOKEN",
             message="유효하지 않은 토큰입니다.",
+        )
+
+class AccessTokenExpiredException(UnauthorizedException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="ACCESS_TOKEN_EXPIRED",
+            message="액세스 토큰이 만료되었습니다.",
+        )
+
+class InvalidAccessTokenException(UnauthorizedException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="INVALID_ACCESS_TOKEN",
+            message="유효하지 않은 액세스 토큰입니다.",
         )
 
 class InvalidTokenTypeException(UnauthorizedException):
