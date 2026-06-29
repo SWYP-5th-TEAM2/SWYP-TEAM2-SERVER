@@ -46,6 +46,15 @@ class Settings(BaseSettings):
     apple_private_key: str | None = Field(default=None, alias="APPLE_PRIVATE_KEY")
     apple_redirect_uri: str | None = Field(default=None, alias="APPLE_REDIRECT_URI")
 
+    # ===== Azure Blob Storage =====
+    azure_storage_connection_string: str = Field(alias="AZURE_STORAGE_CONNECTION_STRING")
+    azure_storage_container_name: str = Field(alias="AZURE_STORAGE_CONTAINER_NAME")
+    max_image_size_mb: int = Field(
+        default=5,
+        gt=0,
+        alias="MAX_IMAGE_SIZE_MB",
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
