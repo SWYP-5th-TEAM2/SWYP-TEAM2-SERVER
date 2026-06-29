@@ -6,6 +6,7 @@ from app.core.exceptions.user import *
 from app.core.exceptions.recurring_schedule import *
 from app.core.exceptions.notification_settings import *
 from app.core.exceptions.user_withdrawal import *
+from app.core.exceptions.room import *
 from app.core.exceptions.image import *
 
 __all__ = [
@@ -94,6 +95,38 @@ __all__ = [
     "UserAlreadyWithdrawnException",
     "UserWithdrawalFailedException",
 
+    # Room Exceptions
+    "RoomRequestBodyMissingException",
+    "RoomNameMissingException",
+    "RoomNameTooLongException",
+    "RoomNameInvalidException",
+    "RoomColorMissingException",
+    "RoomColorInvalidException",
+    "RoomIdInvalidException",
+    "InviteCodeMissingException",
+    "InviteCodeInvalidException",
+    "WithdrawnRoomUserException",
+    "BlockedRoomUserException",
+    "RoomAccessDeniedException",
+    "RoomNotFoundException",
+    "InviteCodeRoomNotFoundException",
+    "RoomAlreadyJoinedException",
+    "RoomCreateFailedException",
+    "InviteCodeLookupFailedException",
+    "RoomJoinFailedException",
+    "RoomUnavailableException",
+    "RoomAlreadyLeftException",
+    "RoomInfoLookupFailedException",
+    "RoomLeaveFailedException",
+    "RoomMemberUserIdInvalidException",
+    "RoomHostRequiredException",
+    "RoomMemberNotFoundException",
+    "SelfKickNotAllowedException",
+    "HostKickNotAllowedException",
+    "RoomMemberAlreadyKickedException",
+    "RoomMemberKickFailedException",
+    "MyRoomsLookupFailedException",
+  
     # Image Exceptions
     "FileMissingException",
     "ImagePurposeMissingException",
