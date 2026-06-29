@@ -15,6 +15,7 @@ from app.core.exceptions import (
     InviteCodeLookupFailedException,
     InviteCodeMissingException,
     InviteCodeRoomNotFoundException,
+    MyRoomsLookupFailedException,
     RoomAccessDeniedException,
     RoomAlreadyJoinedException,
     RoomAlreadyLeftException,
@@ -45,12 +46,17 @@ from app.models import RoomMember, RoomMemberRole, User
 from app.models.user.enums import UserAccountStatus
 from app.repository.room import (
     count_active_places_by_room_id,
+    count_active_room_members,
+    count_votes_by_plan_id,
     create_room_member,
     create_room_with_host,
     find_active_room_by_id_for_update,
     find_active_room_by_invite_code_for_update,
     find_active_room_member,
     find_earliest_active_member,
+    find_my_active_rooms,
+    find_random_room_member_preview_names,
+    find_representative_plan_by_room_id,
     find_room_by_id,
     find_room_by_id_including_deleted,
     find_room_member,
@@ -63,6 +69,8 @@ from app.schemas.room import (
     InviteCodeResponse,
     JoinRoomRequest,
     JoinRoomResponse,
+    MyRoomsResponse,
+    MyRoomSummaryResponse,
     RoomDetailResponse,
     RoomMemberResponse,
 )
@@ -74,6 +82,7 @@ INVITE_CODE_GENERATION_ATTEMPTS = 10
 
 ROOM_COLOR_PATTERN = re.compile(r"^#[0-9A-Fa-f]{6}$")
 INVITE_CODE_PATTERN = re.compile(r"^[A-Z0-9]{6}$")
+ROOM_MEMBER_PREVIEW_LIMIT = 3
 
 
 def _get_constraint_name(exc: IntegrityError) -> str | None:
@@ -372,13 +381,83 @@ def get_room_detail(
         raise RoomInfoLookupFailedException() from exc
 
 
+def get_my_rooms(
+    db: Session,
+    *,
+    user_id: UUID,
+    keyword: str | None,
+) -> MyRoomsResponse:
+    normalized_keyword = keyword.strip() if keyword is not None else None
+    if normalized_keyword == "":
+        normalized_keyword = None
+
+    try:
+        _ensure_active_user(
+            db,
+            user_id=user_id,
+            use_detailed_status_error=True,
+        )
+
+        rooms = find_my_active_rooms(
+            db=db,
+            user_id=user_id,
+            keyword=normalized_keyword,
+        )
+        current_time = datetime.now(timezone.utc)
+
+        room_summaries: list[MyRoomSummaryResponse] = []
+        for room in rooms:
+            # 우선순위는 VOTING(마감 임박) > CONFIRMED > COMPLETED > null
+            representative_plan = find_representative_plan_by_room_id(
+                db=db,
+                room_id=room.id,
+                current_time=current_time,
+            )
+            vote_member_count = (
+                count_votes_by_plan_id(
+                    db=db,
+                    plan_id=representative_plan.id,
+                )
+                if representative_plan is not None
+                else 0
+            )
+
+            room_summaries.append(
+                MyRoomSummaryResponse(
+                    room_id=room.id,
+                    room_name=room.name,
+                    color=room.color,
+                    member_count=count_active_room_members(
+                        db=db,
+                        room_id=room.id,
+                    ),
+                    member_preview_names=find_random_room_member_preview_names(
+                        db=db,
+                        room_id=room.id,
+                        limit=ROOM_MEMBER_PREVIEW_LIMIT,
+                    ),
+                    plan_status=(
+                        representative_plan.status.value
+                        if representative_plan is not None
+                        else None
+                    ),
+                    vote_member_count=vote_member_count,
+                )
+            )
+
+        return MyRoomsResponse(rooms=room_summaries)
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise MyRoomsLookupFailedException() from exc
+
+
 def _transfer_room_host(
     db: Session,
     *,
     room_id: UUID,
     leaving_host_user_id: UUID,
 ) -> bool:
-    # 호스트가 나갈 경우 위임하는 로직(개선 필요)
+    # TODO: 호스트가 나갈 경우 위임하는 로직(추후 개선 필요)
     next_host = find_earliest_active_member(
         db=db,
         room_id=room_id,

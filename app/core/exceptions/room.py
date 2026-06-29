@@ -237,3 +237,11 @@ class RoomMemberKickFailedException(InternalServerException):
             code="ROOM_MEMBER_KICK_FAILED",
             message="멤버 강퇴 중 오류가 발생했습니다.",
         )
+
+
+class MyRoomsLookupFailedException(InternalServerException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="MY_ROOMS_LOOKUP_FAILED",
+            message="가입된 방 목록 조회 중 오류가 발생했습니다.",
+        )

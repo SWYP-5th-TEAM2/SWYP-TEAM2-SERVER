@@ -1,9 +1,20 @@
+from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import and_, case, func, select
+from sqlalchemy import and_, case, desc, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.models import Image, Place, Room, RoomMember, RoomMemberRole, User
+from app.models import (
+    Image,
+    Place,
+    Plan,
+    PlanStatus,
+    Room,
+    RoomMember,
+    RoomMemberRole,
+    User,
+    Vote,
+)
 
 
 def create_room_with_host(
@@ -192,6 +203,119 @@ def count_active_places_by_room_id(
     stmt = select(func.count(Place.id)).where(
         Place.room_id == room_id,
         Place.deleted_at.is_(None),
+    )
+    result = db.execute(stmt)
+    return int(result.scalar_one())
+
+
+def find_my_active_rooms(
+    db: Session,
+    *,
+    user_id: UUID,
+    keyword: str | None,
+) -> list[Room]:
+    conditions = [
+        RoomMember.user_id == user_id,
+        RoomMember.deleted_at.is_(None),
+        Room.deleted_at.is_(None),
+    ]
+    if keyword:
+        conditions.append(Room.name.ilike(f"%{keyword}%"))
+
+    stmt = (
+        select(Room)
+        .join(RoomMember, RoomMember.room_id == Room.id)
+        .where(*conditions)
+        .order_by(RoomMember.created_at.desc(), Room.created_at.desc())
+    )
+    result = db.execute(stmt)
+    return list(result.scalars().all())
+
+
+def count_active_room_members(
+    db: Session,
+    *,
+    room_id: UUID,
+) -> int:
+    stmt = select(func.count(RoomMember.id)).where(
+        RoomMember.room_id == room_id,
+        RoomMember.deleted_at.is_(None),
+    )
+    result = db.execute(stmt)
+    return int(result.scalar_one())
+
+
+def find_random_room_member_preview_names(
+    db: Session,
+    *,
+    room_id: UUID,
+    limit: int,
+) -> list[str]:
+    stmt = (
+        select(User.nickname)
+        .join(RoomMember, RoomMember.user_id == User.id)
+        .where(
+            RoomMember.room_id == room_id,
+            RoomMember.deleted_at.is_(None),
+        )
+        .order_by(func.random())
+        .limit(limit)
+    )
+    result = db.execute(stmt)
+    return [
+        nickname or ""
+        for nickname in result.scalars().all()
+    ]
+
+
+def find_representative_plan_by_room_id(
+    db: Session,
+    *,
+    room_id: UUID,
+    current_time: datetime,
+) -> Plan | None:
+    stmt = (
+        select(Plan)
+        .where(
+            Plan.room_id == room_id,
+            Plan.deleted_at.is_(None),
+            or_(
+                and_(
+                    Plan.status == PlanStatus.VOTING,
+                    Plan.voting_ends_at > current_time,
+                ),
+                Plan.status == PlanStatus.CONFIRMED,
+                Plan.status == PlanStatus.COMPLETED,
+            ),
+        )
+        .order_by(
+            case(
+                (Plan.status == PlanStatus.VOTING, 0),
+                (Plan.status == PlanStatus.CONFIRMED, 1),
+                (Plan.status == PlanStatus.COMPLETED, 2),
+                else_=3,
+            ),
+            case(
+                (Plan.status == PlanStatus.VOTING, Plan.voting_ends_at),
+                (Plan.status == PlanStatus.CONFIRMED, Plan.start_time),
+                else_=None,
+            ).asc(),
+            desc(Plan.updated_at),
+        )
+        .limit(1)
+    )
+    result = db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+def count_votes_by_plan_id(
+    db: Session,
+    *,
+    plan_id: UUID,
+) -> int:
+    stmt = select(func.count(Vote.id)).where(
+        Vote.plan_id == plan_id,
+        Vote.deleted_at.is_(None),
     )
     result = db.execute(stmt)
     return int(result.scalar_one())

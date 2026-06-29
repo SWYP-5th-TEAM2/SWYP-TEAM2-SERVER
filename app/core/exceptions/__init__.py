@@ -124,6 +124,7 @@ __all__ = [
     "HostKickNotAllowedException",
     "RoomMemberAlreadyKickedException",
     "RoomMemberKickFailedException",
+    "MyRoomsLookupFailedException",
 
     # External Exceptions
     "RedisUnavailableException",
