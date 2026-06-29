@@ -149,3 +149,91 @@ class RoomJoinFailedException(InternalServerException):
             code="ROOM_JOIN_FAILED",
             message="방 가입 중 오류가 발생했습니다.",
         )
+
+
+class RoomUnavailableException(ConflictException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="ROOM_UNAVAILABLE",
+            message="사용할 수 없는 방입니다.",
+        )
+
+
+class RoomAlreadyLeftException(ConflictException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="ROOM_ALREADY_LEFT",
+            message="이미 나간 방입니다.",
+        )
+
+
+class RoomInfoLookupFailedException(InternalServerException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="ROOM_INFO_LOOKUP_FAILED",
+            message="방 정보 조회 중 오류가 발생했습니다.",
+        )
+
+
+class RoomLeaveFailedException(InternalServerException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="ROOM_LEAVE_FAILED",
+            message="방 나가기 중 오류가 발생했습니다.",
+        )
+
+
+class RoomMemberUserIdInvalidException(BadRequestException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="INVALID_ROOM_MEMBER_USER_ID",
+            message="사용자 ID 형식이 올바르지 않습니다.",
+        )
+
+
+class RoomHostRequiredException(ForbiddenException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="ROOM_HOST_REQUIRED",
+            message="방장만 멤버를 강퇴할 수 있습니다.",
+        )
+
+
+class RoomMemberNotFoundException(NotFoundException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="ROOM_MEMBER_NOT_FOUND",
+            message="해당 사용자는 방 멤버가 아닙니다.",
+        )
+
+
+class SelfKickNotAllowedException(ConflictException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="SELF_KICK_NOT_ALLOWED",
+            message="자기 자신은 강퇴할 수 없습니다.",
+        )
+
+
+class HostKickNotAllowedException(ConflictException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="HOST_KICK_NOT_ALLOWED",
+            message="방장은 강퇴할 수 없습니다.",
+        )
+
+
+class RoomMemberAlreadyKickedException(ConflictException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="ROOM_MEMBER_ALREADY_KICKED",
+            message="이미 강퇴된 멤버입니다.",
+        )
+
+
+class RoomMemberKickFailedException(InternalServerException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="ROOM_MEMBER_KICK_FAILED",
+            message="멤버 강퇴 중 오류가 발생했습니다.",
+        )

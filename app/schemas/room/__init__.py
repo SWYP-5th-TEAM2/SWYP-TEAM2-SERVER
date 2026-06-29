@@ -3,6 +3,8 @@ from app.schemas.room.response import (
     CreateRoomResponse,
     InviteCodeResponse,
     JoinRoomResponse,
+    RoomDetailResponse,
+    RoomMemberResponse,
 )
 
 __all__ = [
@@ -11,4 +13,6 @@ __all__ = [
     "CreateRoomResponse",
     "InviteCodeResponse",
     "JoinRoomResponse",
+    "RoomDetailResponse",
+    "RoomMemberResponse",
 ]

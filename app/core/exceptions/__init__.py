@@ -113,6 +113,17 @@ __all__ = [
     "RoomCreateFailedException",
     "InviteCodeLookupFailedException",
     "RoomJoinFailedException",
+    "RoomUnavailableException",
+    "RoomAlreadyLeftException",
+    "RoomInfoLookupFailedException",
+    "RoomLeaveFailedException",
+    "RoomMemberUserIdInvalidException",
+    "RoomHostRequiredException",
+    "RoomMemberNotFoundException",
+    "SelfKickNotAllowedException",
+    "HostKickNotAllowedException",
+    "RoomMemberAlreadyKickedException",
+    "RoomMemberKickFailedException",
 
     # External Exceptions
     "RedisUnavailableException",
