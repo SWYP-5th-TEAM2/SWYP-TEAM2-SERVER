@@ -49,8 +49,11 @@ class Settings(BaseSettings):
     # ===== Azure Blob Storage =====
     azure_storage_connection_string: str = Field(alias="AZURE_STORAGE_CONNECTION_STRING")
     azure_storage_container_name: str = Field(alias="AZURE_STORAGE_CONTAINER_NAME")
-    azure_storage_account_name: str = Field(alias="AZURE_STORAGE_ACCOUNT_NAME")
-    max_image_size_mb: int = Field(default=5, alias="MAX_IMAGE_SIZE_MB")
+    max_image_size_mb: int = Field(
+        default=5,
+        gt=0,
+        alias="MAX_IMAGE_SIZE_MB",
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",

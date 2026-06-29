@@ -1,5 +1,9 @@
-from app.core.exceptions import BadRequestException, InternalServerException, BadGatewayException, \
-    ServiceUnavailableException
+from app.core.exceptions.common import (
+    BadGatewayException,
+    BadRequestException,
+    InternalServerException,
+    ServiceUnavailableException,
+)
 
 
 class FileMissingException(BadRequestException):
