@@ -6,6 +6,7 @@ from app.core.exceptions.user import *
 from app.core.exceptions.recurring_schedule import *
 from app.core.exceptions.notification_settings import *
 from app.core.exceptions.user_withdrawal import *
+from app.core.exceptions.room import *
 
 __all__ = [
     "AppException",
@@ -92,6 +93,26 @@ __all__ = [
     "WithdrawalReasonMissingException",
     "UserAlreadyWithdrawnException",
     "UserWithdrawalFailedException",
+
+    # Room Exceptions
+    "RoomRequestBodyMissingException",
+    "RoomNameMissingException",
+    "RoomNameTooLongException",
+    "RoomNameInvalidException",
+    "RoomColorMissingException",
+    "RoomColorInvalidException",
+    "RoomIdInvalidException",
+    "InviteCodeMissingException",
+    "InviteCodeInvalidException",
+    "WithdrawnRoomUserException",
+    "BlockedRoomUserException",
+    "RoomAccessDeniedException",
+    "RoomNotFoundException",
+    "InviteCodeRoomNotFoundException",
+    "RoomAlreadyJoinedException",
+    "RoomCreateFailedException",
+    "InviteCodeLookupFailedException",
+    "RoomJoinFailedException",
 
     # External Exceptions
     "RedisUnavailableException",
