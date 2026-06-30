@@ -8,6 +8,7 @@ from app.core.exceptions.notification_settings import *
 from app.core.exceptions.user_withdrawal import *
 from app.core.exceptions.room import *
 from app.core.exceptions.image import *
+from app.core.exceptions.place import *
 
 __all__ = [
     "AppException",
@@ -136,6 +137,17 @@ __all__ = [
     "ImageUploadFailedException",
     "StorageServerUploadFailedException",
     "StorageServerConnectionFailedException",
+
+    # Place Exceptions
+    "PlaceSearchKeywordMissingException",
+    "PlaceSearchKeywordTooLongException",
+    "UnsupportedPlaceSearchProviderException",
+    "PlaceSearchPageRequestInvalidException",
+    "PlaceSearchCoordinateInvalidException",
+    "PlaceSearchRateLimitExceededException",
+    "PlaceSearchFailedException",
+    "ExternalPlaceSearchApiFailedException",
+    "ExternalPlaceSearchServiceUnavailableException",
 
     # External Exceptions
     "RedisUnavailableException",
