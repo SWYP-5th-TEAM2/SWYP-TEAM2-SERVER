@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     kakao_redirect_uri: str = Field(alias="KAKAO_REDIRECT_URI")
     kakao_client_secret: str = Field(alias="KAKAO_CLIENT_SECRET")
     kakao_local_rest_api_key: str | None = Field(default=None, alias="KAKAO_LOCAL_REST_API_KEY")
+    naver_local_client_id: str | None = Field(default=None, alias="NAVER_LOCAL_CLIENT_ID")
+    naver_local_client_secret: str | None = Field(default=None, alias="NAVER_LOCAL_CLIENT_SECRET")
 
     # ===== Google OAuth =====
     google_client_id: str = Field(alias="GOOGLE_CLIENT_ID")
