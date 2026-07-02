@@ -7,6 +7,7 @@ from app.api.v1.user.router import user_router
 from app.api.v1.place.router import place_router
 from app.api.v1.places.router import places_router
 from app.api.v1.plans.router import plans_router
+from app.api.v1.notifications.router import notifications_router
 
 router = APIRouter()
 
@@ -18,3 +19,4 @@ router.include_router(place_router)
 router.include_router(places_router)
 
 router.include_router(plans_router)
+router.include_router(notifications_router)
