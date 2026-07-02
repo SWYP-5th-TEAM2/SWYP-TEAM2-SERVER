@@ -37,6 +37,12 @@ class Settings(BaseSettings):
     naver_local_client_id: str | None = Field(default=None, alias="NAVER_LOCAL_CLIENT_ID")
     naver_local_client_secret: str | None = Field(default=None, alias="NAVER_LOCAL_CLIENT_SECRET")
 
+
+    # ===== Firebase FCM =====
+    firebase_push_enabled: bool = Field(default=False, alias="FIREBASE_PUSH_ENABLED")
+    firebase_project_id: str | None = Field(default=None, alias="FIREBASE_PROJECT_ID")
+    firebase_credentials_path: str | None = Field(default=None, alias="FIREBASE_CREDENTIALS_PATH")
+
     # ===== Google OAuth =====
     google_client_id: str = Field(alias="GOOGLE_CLIENT_ID")
     google_redirect_uri: str = Field(alias="GOOGLE_REDIRECT_URI")
