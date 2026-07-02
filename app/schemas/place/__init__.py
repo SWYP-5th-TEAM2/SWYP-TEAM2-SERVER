@@ -1,5 +1,5 @@
-from app.schemas.place.place.request import *
-from app.schemas.place.place.response import *
+from app.schemas.place.request import *
+from app.schemas.place.response import *
 
 __all__ = [
     "CreatePlaceRequest",
