@@ -1,5 +1,6 @@
-from app.schemas.place.response.place import *
-from app.schemas.place.response.search import *
+from app.schemas.place.place.response.place import *
+from app.schemas.place.place.response.search import *
+from app.schemas.place.place.response.image_extraction import *
 
 __all__ = [
     "CreatePlaceResponse",
@@ -13,4 +14,6 @@ __all__ = [
     "PlaceSearchResult",
     "PlaceSummaryResponse",
     "UpdatePlaceResponse",
+    "ExtractedPlaceResponse",
+    "PlaceImageExtractionResponse",
 ]

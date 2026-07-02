@@ -47,6 +47,7 @@ from app.core.exceptions import (
     PlanStatusFilterInvalidException,
     PlanTargetMemberMissingException,
     PlanTicketLookupFailedException,
+    PlanTicketNotConfirmedException,
     UnsupportedPlanResponseStatusException,
     UserNotFoundException,
 )
@@ -88,9 +89,11 @@ from app.schemas.plan import (
     PlanListResponse,
     PlanListSummaryResponse,
     PlanMemberResponse,
+    PlanInvitationPlaceResponse,
     PlanPageInfoResponse,
     PlanPlaceSummaryResponse,
     PlanResponseSummaryResponse,
+    PlanUserBasicResponse,
     PlanResponsesPlanResponse,
     PlanResponsesResponse,
     PlanUserPreviewResponse,
@@ -98,6 +101,8 @@ from app.schemas.plan import (
     ReminderResponse,
     SavePlanResponseRequest,
     SavePlanResponseResponse,
+    SavedPlanInfoResponse,
+    TicketLookupResponse,
     TicketResponse,
 )
 
@@ -269,12 +274,31 @@ def _build_user_preview(
     )
 
 
+def _build_user_basic(
+    user_id: UUID | None,
+    nickname: str | None,
+) -> PlanUserBasicResponse:
+    return PlanUserBasicResponse(
+        user_id=user_id,
+        nickname=nickname,
+    )
+
+
 def _build_place_summary(place: Place | None) -> PlanPlaceSummaryResponse:
     return PlanPlaceSummaryResponse(
         place_id=place.id if place else None,
         title=place.title if place else None,
         place_name=place.name if place else None,
         address=place.location if place else None,
+        thumbnail_url=place.place_image if place else None,
+    )
+
+
+def _build_invitation_place(place: Place | None) -> PlanInvitationPlaceResponse:
+    return PlanInvitationPlaceResponse(
+        place_id=place.id if place else None,
+        title=place.title if place else None,
+        place_name=place.name if place else None,
         thumbnail_url=place.place_image if place else None,
     )
 
@@ -290,8 +314,7 @@ def _build_plan_info(plan: Plan) -> PlanResponsesPlanResponse:
 
 def _to_push_summary(result: FcmDispatchResult) -> PushNotificationSummaryResponse:
     return PushNotificationSummaryResponse(
-        target_user_count=result.target_user_count,
-        requested_token_count=result.requested_token_count,
+        requested_count=result.target_user_count,
         sent_count=result.sent_count,
         failed_count=result.failed_count,
         push_status=result.push_status,
@@ -318,10 +341,9 @@ def _build_push_payloads(
     ]
 
 
-def _empty_push_summary(*, target_user_count: int = 0) -> PushNotificationSummaryResponse:
+def _empty_push_summary(*, requested_count: int = 0) -> PushNotificationSummaryResponse:
     return PushNotificationSummaryResponse(
-        target_user_count=target_user_count,
-        requested_token_count=0,
+        requested_count=requested_count,
         sent_count=0,
         failed_count=0,
         push_status="SKIPPED",
@@ -731,7 +753,6 @@ def close_plan(db: Session, *, user_id: UUID, plan_id: object) -> ClosePlanRespo
         return ClosePlanResponse(
             plan_id=plan.id,
             room_id=plan.room_id,
-            plan_status=plan.status.value,
             confirmed_at=plan.confirmed_at,
             ticket=_build_ticket(plan, place, participants),
             notification_created_count=len(notifications),
@@ -869,17 +890,21 @@ def get_invitation(db: Session, *, user_id: UUID, plan_id: object) -> Invitation
         votes = find_votes_by_plan_id(db=db, plan_id=plan.id)
         my_vote = find_vote_by_plan_and_user(db=db, plan_id=plan.id, user_id=user_id)
         member_rows = find_room_member_response_rows(db=db, room_id=plan.room_id, excluded_user_id=plan.creator_id)
-        summary = _build_response_summary(target_member_count=len(member_rows), votes=votes)
         going_user_ids = [vote.user_id for vote in votes if vote.is_attending]
         going_rows = find_members_by_ids(db=db, user_ids=going_user_ids)
+        going_members = [_build_user_preview(*row) for row in going_rows]
         return InvitationResponse(
+            plan_id=plan.id,
+            room_id=plan.room_id,
+            plan_status=plan.status.value,
+            proposed_by=_build_user_basic(plan.creator_id, creator_nickname),
+            place=_build_invitation_place(place),
+            scheduled_at=plan.start_time,
+            response_deadline_at=plan.voting_ends_at,
             server_time=_now(),
-            actor=_build_user_preview(plan.creator_id, creator_nickname, creator_profile_image_url),
-            plan=_build_plan_info(plan),
-            place=_build_place_summary(place),
+            going_member_count=len(going_members),
+            going_members=going_members,
             my_response_status=_response_status_from_vote(my_vote.is_attending if my_vote else None),
-            response_summary=summary,
-            going_members=[_build_user_preview(*row) for row in going_rows],
         )
     except (
         PlanResponseAccessDeniedException,
@@ -939,15 +964,14 @@ def save_plan_response(
         db.commit()
         if push_payloads:
             dispatch_fcm_push_notifications(db=db, payloads=push_payloads)
-        votes = find_votes_by_plan_id(db=db, plan_id=plan.id)
-        target_count = _get_target_member_count(db=db, plan=plan)
         return SavePlanResponseResponse(
-            plan=_build_plan_info(plan),
+            plan=SavedPlanInfoResponse(
+                plan_id=plan.id,
+                scheduled_at=plan.start_time,
+            ),
             my_response={
                 "responseStatus": RESPONSE_GOING if is_attending else RESPONSE_NOT_GOING,
-                "respondedAt": vote.updated_at or vote.created_at,
             },
-            response_summary=_build_response_summary(target_member_count=target_count, votes=votes),
         )
     except (
         PlanResponseAccessDeniedException,
@@ -966,13 +990,13 @@ def save_plan_response(
         raise PlanResponseSaveFailedException() from exc
 
 
-def get_ticket(db: Session, *, user_id: UUID, plan_id: object) -> ClosePlanResponse:
+def get_ticket(db: Session, *, user_id: UUID, plan_id: object) -> TicketLookupResponse:
     parsed_plan_id = _parse_plan_id(plan_id)
     try:
         _ensure_active_user(db=db, user_id=user_id)
         plan = _ensure_plan_accessible(db=db, plan_id=parsed_plan_id, user_id=user_id)
         if plan.status not in {PlanStatus.CONFIRMED, PlanStatus.COMPLETED}:
-            raise PlanAlreadyClosedException()
+            raise PlanTicketNotConfirmedException()
         plan, place, _, _, _ = _get_plan_context(db=db, plan_id=plan.id)
         votes = find_votes_by_plan_id(db=db, plan_id=plan.id)
         attending_user_ids = [vote.user_id for vote in votes if vote.is_attending]
@@ -982,17 +1006,14 @@ def get_ticket(db: Session, *, user_id: UUID, plan_id: object) -> ClosePlanRespo
         participant_ids.extend(member_id for member_id in attending_user_ids if member_id not in participant_ids)
         participants = [_build_user_preview(*row) for row in find_members_by_ids(db=db, user_ids=participant_ids)]
         confirmed_at = plan.confirmed_at or plan.updated_at
-        return ClosePlanResponse(
+        return TicketLookupResponse(
             plan_id=plan.id,
             room_id=plan.room_id,
-            plan_status=plan.status.value,
             confirmed_at=confirmed_at,
             ticket=_build_ticket(plan, place, participants),
-            notification_created_count=0,
-            push_notification=_empty_push_summary(),
         )
     except (
-        PlanAlreadyClosedException,
+        PlanTicketNotConfirmedException,
         PlanNotFoundException,
         PlanDeletedException,
         PlanRoomAccessDeniedException,

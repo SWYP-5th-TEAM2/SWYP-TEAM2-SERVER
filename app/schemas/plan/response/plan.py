@@ -10,11 +10,23 @@ class PlanUserPreviewResponse(CamelModel):
     profile_image_url: str | None = None
 
 
+class PlanUserBasicResponse(CamelModel):
+    user_id: UUID | None
+    nickname: str | None
+
+
 class PlanPlaceSummaryResponse(CamelModel):
     place_id: UUID | None
     title: str | None
     place_name: str | None
     address: str | None = None
+    thumbnail_url: str | None = None
+
+
+class PlanInvitationPlaceResponse(CamelModel):
+    place_id: UUID | None
+    title: str | None
+    place_name: str | None
     thumbnail_url: str | None = None
 
 
@@ -35,8 +47,7 @@ class PlanResponseSummaryResponse(CamelModel):
 
 
 class PushNotificationSummaryResponse(CamelModel):
-    target_user_count: int
-    requested_token_count: int
+    requested_count: int
     sent_count: int
     failed_count: int
     push_status: str
@@ -124,11 +135,17 @@ class TicketResponse(CamelModel):
 class ClosePlanResponse(CamelModel):
     plan_id: UUID
     room_id: UUID | None
-    plan_status: str
     confirmed_at: datetime
     ticket: TicketResponse
     notification_created_count: int
     push_notification: PushNotificationSummaryResponse
+
+
+class TicketLookupResponse(CamelModel):
+    plan_id: UUID
+    room_id: UUID | None
+    confirmed_at: datetime
+    ticket: TicketResponse
 
 
 class PlanListSummaryResponse(CamelModel):
@@ -163,16 +180,24 @@ class PlanListResponse(CamelModel):
 
 
 class InvitationResponse(CamelModel):
+    plan_id: UUID
+    room_id: UUID | None
+    plan_status: str
+    proposed_by: PlanUserBasicResponse
+    place: PlanInvitationPlaceResponse
+    scheduled_at: datetime
+    response_deadline_at: datetime
     server_time: datetime
-    actor: PlanUserPreviewResponse
-    plan: PlanResponsesPlanResponse
-    place: PlanPlaceSummaryResponse
-    my_response_status: str
-    response_summary: PlanResponseSummaryResponse
+    going_member_count: int
     going_members: list[PlanUserPreviewResponse]
+    my_response_status: str
+
+
+class SavedPlanInfoResponse(CamelModel):
+    plan_id: UUID
+    scheduled_at: datetime
 
 
 class SavePlanResponseResponse(CamelModel):
-    plan: PlanResponsesPlanResponse
+    plan: SavedPlanInfoResponse
     my_response: dict[str, object]
-    response_summary: PlanResponseSummaryResponse

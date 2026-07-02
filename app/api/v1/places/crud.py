@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, Query
+from fastapi import APIRouter, Body, Depends, File, Form, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from app.core.responses import success_response
@@ -11,6 +11,7 @@ from app.services.place import (
     create_place,
     delete_place,
     get_place_detail,
+    extract_place_info_from_image,
     get_places,
     update_place,
 )
@@ -67,6 +68,29 @@ def create_new_place(
     return success_response(
         data=response,
         message="장소 후보 생성 성공",
+    )
+
+
+@router.post(
+    "/image-extractions",
+    summary="이미지 기반 장소 정보 추출",
+    description="S7-1-C에서 장소 정보가 포함된 이미지를 업로드했을 때 AI가 이미지에서 장소 후보 초안 정보를 추출합니다.",
+)
+async def extract_place_from_image(
+    room_id: str | None = Form(default=None, alias="roomId", description="이미지 분석을 진행할 방 ID"),
+    image_file: UploadFile | None = File(default=None, alias="imageFile", description="장소 정보가 포함된 이미지 파일"),
+    db: Session = Depends(get_db),
+    user_id: UUID = Depends(get_current_user_id),
+):
+    response = await extract_place_info_from_image(
+        db=db,
+        user_id=user_id,
+        room_id=room_id,
+        file=image_file,
+    )
+    return success_response(
+        data=response,
+        message="이미지 장소 정보 추출 성공",
     )
 
 
