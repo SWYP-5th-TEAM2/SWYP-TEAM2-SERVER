@@ -133,8 +133,8 @@ def close_plan_responses(
 
 @router.get(
     "/{plan_id}/invitation",
-    summary="같이 갈래? 응답 화면 조회",
-    description="S14-1 또는 S14-3 응답 화면에 필요한 약속 제안 정보를 조회합니다.",
+    summary="약속 기반 약속 응답 화면 조회",
+    description="S15-1 약속 목록에서 모집중 약속 카드를 눌렀을 때 S14-1 또는 S14-3 화면에 필요한 정보를 조회합니다.",
 )
 def get_plan_invitation(
     plan_id: str,
@@ -142,7 +142,7 @@ def get_plan_invitation(
     user_id: UUID = Depends(get_current_user_id),
 ):
     response = get_invitation(db=db, user_id=user_id, plan_id=plan_id)
-    return success_response(data=response, message="같이 갈래? 응답 화면 조회 성공")
+    return success_response(data=response, message="약속 응답 화면 조회 성공")
 
 
 @router.put(

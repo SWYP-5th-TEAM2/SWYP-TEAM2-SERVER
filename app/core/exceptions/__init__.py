@@ -177,6 +177,11 @@ __all__ = [
     "PlaceSearchFailedException",
     "ExternalPlaceSearchApiFailedException",
     "ExternalPlaceSearchServiceUnavailableException",
+    "PlaceImageFileMissingException",
+    "PlaceImageFileSizeExceededException",
+    "PlaceImageExtractionServiceUnavailableException",
+    "PlaceImageExtractionResponseInvalidException",
+    "PlaceImageExtractionFailedException",
 
 
     # Plan Exceptions
@@ -220,6 +225,7 @@ __all__ = [
     "PlanInvitationLookupFailedException",
     "PlanResponseSaveFailedException",
     "PlanTicketLookupFailedException",
+    "PlanTicketNotConfirmedException",
 
     # External Exceptions
     "RedisUnavailableException",

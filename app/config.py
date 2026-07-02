@@ -55,6 +55,11 @@ class Settings(BaseSettings):
     apple_private_key: str | None = Field(default=None, alias="APPLE_PRIVATE_KEY")
     apple_redirect_uri: str | None = Field(default=None, alias="APPLE_REDIRECT_URI")
 
+    # ===== Gemini Image Extraction =====
+    gemini_api_key: str | None = Field(default=None, alias="GEMINI_API_KEY")
+    gemini_model: str = Field(default="gemini-2.5-flash", alias="GEMINI_MODEL")
+    gemini_request_timeout_seconds: float = Field(default=30.0, alias="GEMINI_REQUEST_TIMEOUT_SECONDS")
+
     # ===== Azure Blob Storage =====
     azure_storage_connection_string: str = Field(alias="AZURE_STORAGE_CONNECTION_STRING")
     azure_storage_container_name: str = Field(alias="AZURE_STORAGE_CONTAINER_NAME")

@@ -307,3 +307,44 @@ class ExternalPlaceSearchServiceUnavailableException(ServiceUnavailableException
             code="EXTERNAL_PLACE_SEARCH_SERVICE_UNAVAILABLE",
             message="장소 검색 서비스에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.",
         )
+
+
+
+
+class PlaceImageFileMissingException(BadRequestException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="PLACE_IMAGE_FILE_MISSING",
+            message="분석할 이미지 파일이 필요합니다.",
+        )
+
+
+class PlaceImageFileSizeExceededException(BadRequestException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="PLACE_IMAGE_FILE_SIZE_EXCEEDED",
+            message="이미지 파일 크기는 10MB 이하로 업로드해주세요.",
+        )
+
+class PlaceImageExtractionFailedException(InternalServerException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="PLACE_IMAGE_EXTRACTION_FAILED",
+            message="이미지 장소 정보 추출 중 오류가 발생했습니다.",
+        )
+
+
+class PlaceImageExtractionResponseInvalidException(BadGatewayException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="PLACE_IMAGE_EXTRACTION_RESPONSE_INVALID",
+            message="이미지 분석 결과를 처리하지 못했습니다.",
+        )
+
+
+class PlaceImageExtractionServiceUnavailableException(ServiceUnavailableException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="PLACE_IMAGE_EXTRACTION_SERVICE_UNAVAILABLE",
+            message="이미지 분석 서비스에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.",
+        )

@@ -157,6 +157,13 @@ class PlanPendingMemberNotFoundException(ConflictException):
         super().__init__(code="PLAN_PENDING_MEMBER_NOT_FOUND", message="알림을 보낼 미응답 멤버가 없습니다.")
 
 
+
+
+class PlanTicketNotConfirmedException(ConflictException):
+    def __init__(self) -> None:
+        super().__init__(code="PLAN_TICKET_NOT_CONFIRMED", message="확정되지 않은 약속 제안은 티켓을 조회할 수 없습니다.")
+
+
 class PlanNoAttendingMemberException(ConflictException):
     def __init__(self) -> None:
         super().__init__(code="PLAN_NO_ATTENDING_MEMBER", message="참석 가능한 멤버가 없어 약속을 확정할 수 없습니다.")
