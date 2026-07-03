@@ -62,6 +62,34 @@ def find_recurring_schedule_days_by_group_ids(
     ]
 
 
+def find_active_recurring_schedule_rows_by_user_ids(
+    db: Session,
+    *,
+    user_ids: list[UUID],
+) -> list[tuple[UUID, DayOfWeek, time, time]]:
+    if not user_ids:
+        return []
+
+    stmt = (
+        select(
+            RecurringScheduleGroup.user_id,
+            RecurringScheduleDay.day_of_week,
+            RecurringScheduleGroup.start_time,
+            RecurringScheduleGroup.end_time,
+        )
+        .join(
+            RecurringScheduleDay,
+            RecurringScheduleDay.recurring_schedule_group_id == RecurringScheduleGroup.id,
+        )
+        .where(
+            RecurringScheduleGroup.user_id.in_(user_ids),
+            RecurringScheduleGroup.is_enabled.is_(True),
+            RecurringScheduleGroup.deleted_at.is_(None),
+        )
+    )
+    return list(db.execute(stmt).all())
+
+
 def create_recurring_schedule(
     db: Session,
     *,

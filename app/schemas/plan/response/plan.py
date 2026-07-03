@@ -74,6 +74,7 @@ class PickedPlaceResponse(CamelModel):
 class DrawPlaceResponse(CamelModel):
     picked_place: PickedPlaceResponse
     recommended_scheduled_at: datetime
+    recommended_response_deadline_at: datetime
     drawn_at: datetime
     target_member_count: int
 
