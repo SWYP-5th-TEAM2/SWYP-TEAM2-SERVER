@@ -33,6 +33,15 @@ class Settings(BaseSettings):
     kakao_client_id: str = Field(alias="KAKAO_CLIENT_ID")
     kakao_redirect_uri: str = Field(alias="KAKAO_REDIRECT_URI")
     kakao_client_secret: str = Field(alias="KAKAO_CLIENT_SECRET")
+    kakao_local_rest_api_key: str | None = Field(default=None, alias="KAKAO_LOCAL_REST_API_KEY")
+    naver_local_client_id: str | None = Field(default=None, alias="NAVER_LOCAL_CLIENT_ID")
+    naver_local_client_secret: str | None = Field(default=None, alias="NAVER_LOCAL_CLIENT_SECRET")
+
+
+    # ===== Firebase FCM =====
+    firebase_push_enabled: bool = Field(default=False, alias="FIREBASE_PUSH_ENABLED")
+    firebase_project_id: str | None = Field(default=None, alias="FIREBASE_PROJECT_ID")
+    firebase_credentials_path: str | None = Field(default=None, alias="FIREBASE_CREDENTIALS_PATH")
 
     # ===== Google OAuth =====
     google_client_id: str = Field(alias="GOOGLE_CLIENT_ID")
@@ -45,6 +54,11 @@ class Settings(BaseSettings):
     apple_key_id: str | None = Field(default=None, alias="APPLE_KEY_ID")
     apple_private_key: str | None = Field(default=None, alias="APPLE_PRIVATE_KEY")
     apple_redirect_uri: str | None = Field(default=None, alias="APPLE_REDIRECT_URI")
+
+    # ===== Gemini Image Extraction =====
+    gemini_api_key: str | None = Field(default=None, alias="GEMINI_API_KEY")
+    gemini_model: str = Field(default="gemini-2.5-flash", alias="GEMINI_MODEL")
+    gemini_request_timeout_seconds: float = Field(default=30.0, alias="GEMINI_REQUEST_TIMEOUT_SECONDS")
 
     # ===== Azure Blob Storage =====
     azure_storage_connection_string: str = Field(alias="AZURE_STORAGE_CONNECTION_STRING")
