@@ -9,6 +9,7 @@ set -Eeuo pipefail
 ACR_NAME="${1:?ACR name is required}"
 APP_DIR="${2:-/opt/mohaeng-server}"
 NEW_IMAGE_REF="${3:?Image reference is required}"
+KAKAO_LOCAL_REST_API_KEY="${4:-}"
 HEALTH_URL="http://127.0.0.1:8000/api/health"
 IMAGE_TAG="${NEW_IMAGE_REF##*:}"
 
@@ -35,6 +36,20 @@ on_error() {
 trap on_error ERR
 
 cd "$APP_DIR"
+
+if [ -z "$KAKAO_LOCAL_REST_API_KEY" ]; then
+  echo "KAKAO_LOCAL_REST_API_KEY is required." >&2
+  exit 1
+fi
+
+ENV_FILE="$APP_DIR/.env"
+touch "$ENV_FILE"
+
+if grep -q '^KAKAO_LOCAL_REST_API_KEY=' "$ENV_FILE"; then
+  sed -i "s|^KAKAO_LOCAL_REST_API_KEY=.*|KAKAO_LOCAL_REST_API_KEY=$KAKAO_LOCAL_REST_API_KEY|" "$ENV_FILE"
+else
+  printf '\nKAKAO_LOCAL_REST_API_KEY=%s\n' "$KAKAO_LOCAL_REST_API_KEY" >> "$ENV_FILE"
+fi
 
 # 현재 컨테이너와 이미지 정보를 rollback 용도로 저장
 CURRENT_CONTAINER_ID="$(docker compose ps -q fastapi 2>/dev/null || true)"

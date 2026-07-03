@@ -82,6 +82,7 @@ jobs:
                 "${{ vars.ACR_NAME }}" \
                 "/opt/mohaeng-server" \
                 "${{ vars.ACR_LOGIN_SERVER }}/${{ vars.ACR_IMAGE_NAME }}:${{ github.sha }}" \
+                "${{ secrets.KAKAO_LOCAL_REST_API_KEY }}" \
               --query 'value[0].message' \
               --output tsv
           )"
