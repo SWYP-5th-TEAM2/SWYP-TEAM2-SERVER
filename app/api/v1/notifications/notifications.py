@@ -17,7 +17,7 @@ router = APIRouter()
 
 
 @router.get(
-    "",
+    "/",
     summary="알림 목록 조회",
     description="S13 알림 탭에서 사용자에게 도착한 알림 목록을 조회합니다.",
 )

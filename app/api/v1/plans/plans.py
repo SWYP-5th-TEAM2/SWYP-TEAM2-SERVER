@@ -52,7 +52,7 @@ def draw_plan_place(
 
 
 @router.get(
-    "",
+    "/",
     summary="약속 목록 조회",
     description="약속 탭에서 전체, 확정, 모집중 약속 목록을 조회합니다.",
 )
@@ -76,7 +76,7 @@ def get_plans(
 
 
 @router.post(
-    "",
+    "/",
     summary="약속 제안 생성",
     description="S11-1에서 N명에게 물어보기 버튼을 눌렀을 때 호출합니다.",
 )
