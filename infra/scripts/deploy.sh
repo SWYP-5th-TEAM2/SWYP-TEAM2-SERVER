@@ -10,6 +10,8 @@ ACR_NAME="${1:?ACR name is required}"
 APP_DIR="${2:-/opt/mohaeng-server}"
 NEW_IMAGE_REF="${3:?Image reference is required}"
 KAKAO_LOCAL_REST_API_KEY="${4:-}"
+NAVER_LOCAL_CLIENT_ID="${5:-}"
+NAVER_LOCAL_CLIENT_SECRET="${6:-}"
 HEALTH_URL="http://127.0.0.1:8000/api/health"
 IMAGE_TAG="${NEW_IMAGE_REF##*:}"
 
