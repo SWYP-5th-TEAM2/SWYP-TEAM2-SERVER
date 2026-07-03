@@ -98,6 +98,7 @@ class GoogleOAuthClient(OAuthClient):
                 google_jwk_client.get_signing_key_from_jwt,
                 normalized_token,
             )
+            # ID Token payload의 audience(aud)에 지정된 Web Client ID 검증
             payload = jwt.decode(
                 normalized_token,
                 signing_key.key,

@@ -45,8 +45,6 @@ class Settings(BaseSettings):
 
     # ===== Google OAuth =====
     google_client_id: str = Field(alias="GOOGLE_CLIENT_ID")
-    google_redirect_uri: str = Field(alias="GOOGLE_REDIRECT_URI")
-    google_client_secret: str = Field(alias="GOOGLE_CLIENT_SECRET")
 
     # ===== Apple OAuth =====
     apple_team_id: str | None = Field(default=None, alias="APPLE_TEAM_ID")
