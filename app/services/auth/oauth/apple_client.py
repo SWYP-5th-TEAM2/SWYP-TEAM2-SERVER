@@ -156,10 +156,10 @@ async def _get_user_info_from_identity_token(
 class AppleOAuthClient(OAuthClient):
     async def get_access_token(self, code: str) -> str:
         token_response = await _exchange_apple_authorization_code(code)
-        access_token = token_response.get("access_token")
-        if not isinstance(access_token, str) or not access_token:
+        identity_token = token_response.get("id_token")
+        if not isinstance(identity_token, str) or not identity_token:
             raise SocialLoginFailedException()
-        return access_token
+        return identity_token
 
     async def get_user_info(self, access_token: str) -> OAuthUserInfo:
         return await _get_user_info_from_identity_token(access_token)
