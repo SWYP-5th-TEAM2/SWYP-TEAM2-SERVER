@@ -10,7 +10,6 @@ from app.core.exceptions import SocialLoginFailedException, RequiredUserInfoMiss
 from app.models.user.enums import Provider
 from app.services.auth.oauth.base import OAuthClient, OAuthUserInfo
 
-GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USER_INFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
 GOOGLE_JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs"
 GOOGLE_ISSUERS = {"accounts.google.com", "https://accounts.google.com"}
@@ -22,36 +21,8 @@ google_jwk_client = PyJWKClient(
 
 class GoogleOAuthClient(OAuthClient):
     async def get_access_token(self, code: str) -> str:
-        data = {
-            "code": code,
-            "client_id": settings.google_client_id,
-            "client_secret": settings.google_client_secret,
-            "redirect_uri": settings.google_redirect_uri,
-            "grant_type": "authorization_code",
-        }
-
-        try:
-            async with httpx.AsyncClient(timeout=GOOGLE_HTTP_TIMEOUT) as client:
-                response = await client.post(
-                    url=GOOGLE_TOKEN_URL,
-                    data=data,
-                    headers={"Content-Type": "application/x-www-form-urlencoded"},
-                )
-        except httpx.HTTPError:
-            raise SocialLoginFailedException()
-
-        if response.status_code != 200:
-            print("Google token error status:", response.status_code)
-            print("Google token error body:", response.text)
-            raise SocialLoginFailedException()
-
-        body = response.json()
-        access_token = body.get("access_token")
-
-        if not isinstance(access_token, str) or not access_token:
-            raise SocialLoginFailedException()
-
-        return access_token
+        # 웹 기반 인증 시 필요
+        raise SocialLoginFailedException()
 
 
     async def get_user_info(self, access_token: str) -> OAuthUserInfo:
@@ -98,6 +69,7 @@ class GoogleOAuthClient(OAuthClient):
                 google_jwk_client.get_signing_key_from_jwt,
                 normalized_token,
             )
+            # ID Token payload의 audience(aud)에 지정된 Web Client ID 검증
             payload = jwt.decode(
                 normalized_token,
                 signing_key.key,

@@ -10,7 +10,7 @@ class SocialLoginRequest(CamelModel):
     )
     token: str = Field(
         min_length=1,
-        description="Kakao access token, Google ID token, Apple identity token",
+        description="Kakao access token / Google ID token / Apple identity token",
     )
     code: str | None = Field(
         default=None,

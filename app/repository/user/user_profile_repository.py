@@ -1,9 +1,9 @@
 from uuid import UUID
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, select, update
 from sqlalchemy.orm import Session, aliased
 
-from app.models import Image, RecurringScheduleGroup, Room, RoomMember
+from app.models import Image, ImagePurpose, RecurringScheduleGroup, Room, RoomMember
 
 
 def find_user_image_by_id(
@@ -39,6 +39,28 @@ def find_user_image_by_url(
     )
     result = db.execute(stmt)
     return result.scalar_one_or_none()
+
+
+def demote_user_profile_images_except(
+    db: Session,
+    *,
+    user_id: UUID,
+    selected_image_id: UUID | None,
+) -> None:
+    conditions = [
+        Image.user_id == user_id,
+        Image.image_purpose == ImagePurpose.PROFILE_IMAGE,
+        Image.deleted_at.is_(None),
+    ]
+    if selected_image_id is not None:
+        conditions.append(Image.id != selected_image_id)
+
+    stmt = (
+        update(Image)
+        .where(*conditions)
+        .values(image_purpose=ImagePurpose.ETC)
+    )
+    db.execute(stmt)
 
 
 def find_room_summaries_by_user_id(

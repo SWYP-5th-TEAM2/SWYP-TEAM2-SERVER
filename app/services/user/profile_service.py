@@ -21,6 +21,7 @@ from app.models import ImagePurpose
 from app.models.user.enums import UserAccountStatus
 from app.repository.user import (
     count_recurring_schedule_groups_by_user_id,
+    demote_user_profile_images_except,
     find_user_image_by_id,
     find_room_summaries_by_user_id,
     find_user_by_id,
@@ -133,20 +134,19 @@ def update_user_profile(
                 if next_profile_image is None:
                     raise ProfileImageUrlNotAllowedException()
 
-            # 이미지가 교체되거나 삭제될 때 PROFILE_IMAGE -> ETC 수정
-            if (
-                current_profile_image is not None
-                and (
-                    next_profile_image is None
-                    or current_profile_image.id != next_profile_image.id
-                )
-                and current_profile_image.image_purpose == ImagePurpose.PROFILE_IMAGE
-            ):
-                current_profile_image.image_purpose = ImagePurpose.ETC
+                if next_profile_image.image_purpose != ImagePurpose.PROFILE_IMAGE:
+                    raise ProfileImageUrlNotAllowedException()
 
-            # 새로 이미지 연결 ETC -> PROFILE_IMAGE
-            if next_profile_image is not None:
-                next_profile_image.image_purpose = ImagePurpose.PROFILE_IMAGE
+            # 선택한 이미지 한 건만 남기고, 같은 사용자의 나머지는 모두 ETC로 변경
+            demote_user_profile_images_except(
+                db=db,
+                user_id=user_id,
+                selected_image_id=(
+                    next_profile_image.id
+                    if next_profile_image is not None
+                    else None
+                ),
+            )
 
             # null이면 FK는 null, 이미지가 있으면 FK 연결
             user.profile_image_id = (

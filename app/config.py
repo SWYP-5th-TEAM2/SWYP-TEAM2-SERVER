@@ -45,15 +45,12 @@ class Settings(BaseSettings):
 
     # ===== Google OAuth =====
     google_client_id: str = Field(alias="GOOGLE_CLIENT_ID")
-    google_redirect_uri: str = Field(alias="GOOGLE_REDIRECT_URI")
-    google_client_secret: str = Field(alias="GOOGLE_CLIENT_SECRET")
 
     # ===== Apple OAuth =====
     apple_team_id: str | None = Field(default=None, alias="APPLE_TEAM_ID")
     apple_client_id: str | None = Field(default=None, alias="APPLE_CLIENT_ID")
     apple_key_id: str | None = Field(default=None, alias="APPLE_KEY_ID")
     apple_private_key: str | None = Field(default=None, alias="APPLE_PRIVATE_KEY")
-    apple_redirect_uri: str | None = Field(default=None, alias="APPLE_REDIRECT_URI")
 
     # ===== AI Image Extraction =====
     image_extraction_ai_provider: str = Field(default="GEMINI", alias="IMAGE_EXTRACTION_AI_PROVIDER")

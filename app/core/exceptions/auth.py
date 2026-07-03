@@ -145,6 +145,14 @@ class TokenIssueFailedException(InternalServerException):
         )
 
 
+class AppleOAuthConfigurationException(InternalServerException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="APPLE_OAUTH_CONFIGURATION_ERROR",
+            message="Apple 로그인 설정이 올바르지 않습니다.",
+        )
+
+
 # 502 BAD GATEWAY
 class SocialUserInfoFetchFailedException(BadGatewayException):
     def __init__(self) -> None:
