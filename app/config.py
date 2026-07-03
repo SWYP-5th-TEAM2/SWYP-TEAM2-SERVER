@@ -55,10 +55,25 @@ class Settings(BaseSettings):
     apple_private_key: str | None = Field(default=None, alias="APPLE_PRIVATE_KEY")
     apple_redirect_uri: str | None = Field(default=None, alias="APPLE_REDIRECT_URI")
 
-    # ===== Gemini Image Extraction =====
+    # ===== AI Image Extraction =====
+    image_extraction_ai_provider: str = Field(default="GEMINI", alias="IMAGE_EXTRACTION_AI_PROVIDER")
+
     gemini_api_key: str | None = Field(default=None, alias="GEMINI_API_KEY")
     gemini_model: str = Field(default="gemini-2.5-flash", alias="GEMINI_MODEL")
     gemini_request_timeout_seconds: float = Field(default=30.0, alias="GEMINI_REQUEST_TIMEOUT_SECONDS")
+
+    openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
+    openai_base_url: str = Field(default="https://api.openai.com/v1", alias="OPENAI_BASE_URL")
+    openai_api_mode: str = Field(default="AUTO", alias="OPENAI_API_MODE")
+    openai_image_extraction_model: str | None = Field(default=None, alias="OPENAI_IMAGE_EXTRACTION_MODEL")
+    openai_request_timeout_seconds: float = Field(default=30.0, alias="OPENAI_REQUEST_TIMEOUT_SECONDS")
+
+    anthropic_api_key: str | None = Field(default=None, alias="ANTHROPIC_API_KEY")
+    anthropic_image_extraction_model: str | None = Field(default=None, alias="ANTHROPIC_IMAGE_EXTRACTION_MODEL")
+    anthropic_api_version: str = Field(default="2023-06-01", alias="ANTHROPIC_API_VERSION")
+    anthropic_max_tokens: int = Field(default=2048, alias="ANTHROPIC_MAX_TOKENS")
+    anthropic_request_timeout_seconds: float = Field(default=30.0, alias="ANTHROPIC_REQUEST_TIMEOUT_SECONDS")
+
 
     # ===== Azure Blob Storage =====
     azure_storage_connection_string: str = Field(alias="AZURE_STORAGE_CONNECTION_STRING")
