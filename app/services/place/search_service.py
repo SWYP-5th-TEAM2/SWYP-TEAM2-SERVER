@@ -89,14 +89,13 @@ def _parse_positive_int(
 
 
 def _get_kakao_rest_api_key() -> str:
-    # 장소 검색 API는 Kakao Local REST API Key를 우선 사용한다.
-    # 기존 OAuth용 KAKAO_CLIENT_ID에 REST API Key를 넣어둔 환경도 고려해 fallback을 둔다.
-    api_key = settings.kakao_local_rest_api_key or settings.kakao_client_id
-    if not api_key or api_key.strip() in {
-        "kakao-local-rest-api-key",
-        "kakao-client-id",
-    }:
-        raise ExternalPlaceSearchApiFailedException()
+    # Kakao Local API는 OAuth Client ID가 아니라 REST API Key가 필요합니다.
+    # OAuth용 KAKAO_CLIENT_ID를 fallback으로 사용하면 운영 환경에서 401/502성 오류를 만들 수 있어
+    # 장소 검색은 KAKAO_LOCAL_REST_API_KEY만 사용하도록 분리합니다.
+    api_key = settings.kakao_local_rest_api_key
+    if not api_key or api_key.strip() == "kakao-local-rest-api-key":
+        logger.error("KAKAO_LOCAL_REST_API_KEY is not configured for place search.")
+        raise ExternalPlaceSearchServiceUnavailableException()
 
     return api_key.strip()
 
@@ -111,7 +110,8 @@ def _get_naver_local_credentials() -> tuple[str, str]:
         or client_id.strip() == "naver-local-client-id"
         or client_secret.strip() == "naver-local-client-secret"
     ):
-        raise ExternalPlaceSearchApiFailedException()
+        logger.error("NAVER_LOCAL_CLIENT_ID or NAVER_LOCAL_CLIENT_SECRET is not configured for place search.")
+        raise ExternalPlaceSearchServiceUnavailableException()
 
     return client_id.strip(), client_secret.strip()
 
@@ -220,12 +220,15 @@ async def _search_places_by_kakao(
         raise ExternalPlaceSearchApiFailedException() from exc
 
     if response.status_code == 429:
+        logger.warning("Kakao place search rate limited: status=%s body=%s", response.status_code, response.text[:500])
         raise PlaceSearchRateLimitExceededException()
 
     if 500 <= response.status_code:
+        logger.warning("Kakao place search service unavailable: status=%s body=%s", response.status_code, response.text[:500])
         raise ExternalPlaceSearchServiceUnavailableException()
 
     if response.status_code != 200:
+        logger.warning("Kakao place search API failed: status=%s body=%s", response.status_code, response.text[:500])
         raise ExternalPlaceSearchApiFailedException()
 
     try:
@@ -302,12 +305,15 @@ async def _search_places_by_naver(
         raise ExternalPlaceSearchApiFailedException() from exc
 
     if response.status_code == 429:
+        logger.warning("Naver place search rate limited: status=%s body=%s", response.status_code, response.text[:500])
         raise PlaceSearchRateLimitExceededException()
 
     if 500 <= response.status_code:
+        logger.warning("Naver place search service unavailable: status=%s body=%s", response.status_code, response.text[:500])
         raise ExternalPlaceSearchServiceUnavailableException()
 
     if response.status_code != 200:
+        logger.warning("Naver place search API failed: status=%s body=%s", response.status_code, response.text[:500])
         raise ExternalPlaceSearchApiFailedException()
 
     try:

@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1.place.search import router as search_router
+from app.api.v1.places.search import router as search_router
 from app.api.v1.places.crud import router as crud_router
 
 places_router = APIRouter(
