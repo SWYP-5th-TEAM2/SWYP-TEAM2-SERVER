@@ -45,6 +45,7 @@ __all__ = [
     "BlockedUserException",
     "EmailAlreadyExistsException",
     "TokenIssueFailedException",
+    "AppleOAuthConfigurationException",
     "SocialUserInfoFetchFailedException",
     "ExternalAuthServiceUnavailableException",
 
