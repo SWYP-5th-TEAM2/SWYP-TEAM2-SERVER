@@ -51,7 +51,7 @@ from app.core.exceptions import (
     UnsupportedPlanResponseStatusException,
     UserNotFoundException,
 )
-from app.models import NotificationTargetType, NotificationType, Place, Plan, PlanStatus, RoomMemberRole, User
+from app.models import DayOfWeek, NotificationTargetType, NotificationType, Place, Plan, PlanStatus, RoomMemberRole, User
 from app.models.user.enums import UserAccountStatus
 from app.repository.plan import (
     count_drawable_places,
@@ -73,6 +73,7 @@ from app.repository.plan import (
     upsert_vote,
 )
 from app.repository.room import find_active_room_member, find_room_by_id
+from app.repository.schedule import find_active_recurring_schedule_rows_by_user_ids
 from app.repository.user import find_user_by_id
 from app.services.notification import FcmDispatchResult, FcmPushPayload, dispatch_fcm_push_notifications
 from app.schemas.plan import (
@@ -110,7 +111,11 @@ KST = timezone(timedelta(hours=9))
 DEFAULT_PAGE = 0
 DEFAULT_SIZE = 20
 MAX_PAGE_SIZE = 50
-DRAW_RECOMMEND_HOUR = 14
+RESPONSE_DEADLINE_AFTER_DRAW_HOURS = 24
+RECOMMEND_TIME_SLOT_MINUTES = 10
+RECOMMEND_BUSINESS_START = time(hour=11)
+RECOMMEND_BUSINESS_END = time(hour=20)
+RECOMMEND_SEARCH_DAYS = 30
 TARGET_MEMBER_PREVIEW_LIMIT = 4
 
 RESPONSE_GOING = "GOING"
@@ -119,6 +124,125 @@ RESPONSE_PENDING = "PENDING"
 
 PLAN_STATUS_ALL = "ALL"
 PLAN_STATUS_RECRUITING = "RECRUITING"
+
+
+PYTHON_WEEKDAY_TO_DAY_OF_WEEK = {
+    0: DayOfWeek.MON,
+    1: DayOfWeek.TUE,
+    2: DayOfWeek.WED,
+    3: DayOfWeek.THU,
+    4: DayOfWeek.FRI,
+    5: DayOfWeek.SAT,
+    6: DayOfWeek.SUN,
+}
+
+
+def _next_slot_after(value: datetime, *, minutes: int = RECOMMEND_TIME_SLOT_MINUTES) -> datetime:
+    normalized = value.astimezone(KST)
+    slot_seconds = minutes * 60
+    seconds_since_midnight = (
+        normalized.hour * 3600
+        + normalized.minute * 60
+        + normalized.second
+    )
+    remainder = seconds_since_midnight % slot_seconds
+    if remainder == 0 and normalized.microsecond == 0:
+        delta_seconds = slot_seconds
+    else:
+        delta_seconds = slot_seconds - remainder
+    return (normalized + timedelta(seconds=delta_seconds)).replace(second=0, microsecond=0)
+
+
+def _business_start_for_day(value: datetime) -> datetime:
+    current = value.astimezone(KST)
+    return datetime.combine(current.date(), RECOMMEND_BUSINESS_START, tzinfo=KST)
+
+
+def _business_end_for_day(value: datetime) -> datetime:
+    current = value.astimezone(KST)
+    return datetime.combine(current.date(), RECOMMEND_BUSINESS_END, tzinfo=KST)
+
+
+def _adjust_to_business_window(value: datetime) -> datetime:
+    candidate = value.astimezone(KST)
+    day_start = _business_start_for_day(candidate)
+    day_end = _business_end_for_day(candidate)
+    if candidate < day_start:
+        return day_start
+    if candidate >= day_end:
+        return _business_start_for_day(candidate + timedelta(days=1))
+    return candidate
+
+
+def _has_recurring_schedule_conflict(
+    *,
+    candidate: datetime,
+    user_id: UUID,
+    recurring_schedule_map: dict[UUID, dict[DayOfWeek, list[tuple[time, time]]]],
+) -> bool:
+    schedules_by_day = recurring_schedule_map.get(user_id)
+    if not schedules_by_day:
+        return False
+    day_of_week = PYTHON_WEEKDAY_TO_DAY_OF_WEEK[candidate.weekday()]
+    candidate_time = candidate.timetz().replace(tzinfo=None)
+    for start_time, end_time in schedules_by_day.get(day_of_week, []):
+        if start_time <= candidate_time < end_time:
+            return True
+    return False
+
+
+def _build_recurring_schedule_map(
+    rows: list[tuple[UUID, DayOfWeek, time, time]],
+) -> dict[UUID, dict[DayOfWeek, list[tuple[time, time]]]]:
+    schedule_map: dict[UUID, dict[DayOfWeek, list[tuple[time, time]]]] = {}
+    for user_id, day_of_week, start_time, end_time in rows:
+        schedule_map.setdefault(user_id, {}).setdefault(day_of_week, []).append((start_time, end_time))
+    return schedule_map
+
+
+def _find_recommended_scheduled_at(
+    *,
+    response_deadline_at: datetime,
+    creator_id: UUID,
+    room_member_ids: list[UUID],
+    recurring_schedule_map: dict[UUID, dict[DayOfWeek, list[tuple[time, time]]]],
+) -> datetime:
+    first_candidate = _adjust_to_business_window(_next_slot_after(response_deadline_at))
+    fallback_creator_available: datetime | None = None
+    fallback_business_slot = first_candidate
+    candidate = first_candidate
+    checked_slots = 0
+    max_slots = int((RECOMMEND_SEARCH_DAYS + 1) * 24 * 60 / RECOMMEND_TIME_SLOT_MINUTES)
+
+    while checked_slots < max_slots:
+        candidate = _adjust_to_business_window(candidate)
+        if candidate >= _business_end_for_day(candidate):
+            candidate = _business_start_for_day(candidate + timedelta(days=1))
+            continue
+
+        creator_available = not _has_recurring_schedule_conflict(
+            candidate=candidate,
+            user_id=creator_id,
+            recurring_schedule_map=recurring_schedule_map,
+        )
+        if creator_available:
+            if fallback_creator_available is None:
+                fallback_creator_available = candidate
+            group_available = all(
+                not _has_recurring_schedule_conflict(
+                    candidate=candidate,
+                    user_id=member_id,
+                    recurring_schedule_map=recurring_schedule_map,
+                )
+                for member_id in room_member_ids
+            )
+            if group_available:
+                return candidate
+
+        candidate = candidate + timedelta(minutes=RECOMMEND_TIME_SLOT_MINUTES)
+        checked_slots += 1
+
+    return fallback_creator_available or fallback_business_slot
 
 
 def _now() -> datetime:
@@ -428,11 +552,22 @@ def draw_place(db: Session, *, user_id: UUID, request: DrawPlaceRequest | None) 
 
         place, nickname = row
         drawn_at = _now()
-        recommended_date = drawn_at.date() + timedelta(days=1)
-        recommended_scheduled_at = datetime.combine(
-            recommended_date,
-            time(hour=DRAW_RECOMMEND_HOUR),
-            tzinfo=KST,
+        recommended_response_deadline_at = drawn_at + timedelta(hours=RESPONSE_DEADLINE_AFTER_DRAW_HOURS)
+        member_rows = find_room_member_response_rows(
+            db=db,
+            room_id=room_id,
+            excluded_user_id=None,
+        )
+        room_member_ids = [member_id for member_id, _, _, _ in member_rows]
+        recurring_schedule_rows = find_active_recurring_schedule_rows_by_user_ids(
+            db=db,
+            user_ids=room_member_ids,
+        )
+        recommended_scheduled_at = _find_recommended_scheduled_at(
+            response_deadline_at=recommended_response_deadline_at,
+            creator_id=user_id,
+            room_member_ids=room_member_ids,
+            recurring_schedule_map=_build_recurring_schedule_map(recurring_schedule_rows),
         )
         target_count = count_target_members(
             db=db,
@@ -452,6 +587,7 @@ def draw_place(db: Session, *, user_id: UUID, request: DrawPlaceRequest | None) 
                 ),
             ),
             recommended_scheduled_at=recommended_scheduled_at,
+            recommended_response_deadline_at=recommended_response_deadline_at,
             drawn_at=drawn_at,
             target_member_count=target_count,
         )
