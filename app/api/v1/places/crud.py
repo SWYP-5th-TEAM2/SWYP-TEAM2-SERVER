@@ -20,7 +20,7 @@ router = APIRouter()
 
 
 @router.get(
-    "",
+    "/",
     summary="장소 후보 목록 조회",
     description="후보함에서 방에 저장된 장소 후보 목록을 조회합니다.",
 )
@@ -51,7 +51,7 @@ def get_place_list(
 
 
 @router.post(
-    "",
+    "/",
     summary="장소 후보 생성",
     description="S8 확인 화면에서 맞아요 뽑기함에 넣기 버튼을 눌렀을 때 호출합니다.",
 )
