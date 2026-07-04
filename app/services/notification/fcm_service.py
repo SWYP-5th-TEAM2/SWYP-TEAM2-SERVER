@@ -6,13 +6,18 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.models import NotificationType
+from app.models import DeviceType, NotificationType
 from app.repository.fcm import deactivate_fcm_tokens, find_active_fcm_token_rows
 
 PUSH_STATUS_REQUESTED = "REQUESTED"
 PUSH_STATUS_PARTIAL_FAILED = "PARTIAL_FAILED"
 PUSH_STATUS_FAILED = "FAILED"
 PUSH_STATUS_SKIPPED = "SKIPPED"
+
+ANDROID_FCM_PRIORITY_HIGH = "high"
+APNS_PUSH_TYPE_ALERT = "alert"
+APNS_PRIORITY_IMMEDIATE = "10"
+APNS_SOUND_DEFAULT = "default"
 
 
 @dataclass(frozen=True)
@@ -86,6 +91,76 @@ def _get_messaging_module():
         return None
 
 
+def _build_android_message(messaging, *, token: str, payload: FcmPushPayload):
+    """Build Android-specific FCM message.
+
+    Android는 AndroidConfig/AndroidNotification 쪽에 title/body를 넣어 전송한다.
+    공통 data payload는 알림 클릭 후 화면 이동에 사용한다.
+    """
+    return messaging.Message(
+        token=token,
+        data=_build_data(payload),
+        android=messaging.AndroidConfig(
+            priority=ANDROID_FCM_PRIORITY_HIGH,
+            notification=messaging.AndroidNotification(
+                title=payload.title,
+                body=payload.body,
+            ),
+        ),
+    )
+
+
+def _build_apns_message(messaging, *, token: str, payload: FcmPushPayload):
+    """Build iOS/APNs-specific FCM message.
+
+    iOS는 APNSConfig/APNSPayload/ApsAlert 쪽에 title/body를 넣어 전송한다.
+    APNs alert push로 명확히 처리되도록 header와 sound를 함께 지정한다.
+    """
+    return messaging.Message(
+        token=token,
+        data=_build_data(payload),
+        apns=messaging.APNSConfig(
+            headers={
+                "apns-push-type": APNS_PUSH_TYPE_ALERT,
+                "apns-priority": APNS_PRIORITY_IMMEDIATE,
+            },
+            payload=messaging.APNSPayload(
+                aps=messaging.Aps(
+                    alert=messaging.ApsAlert(
+                        title=payload.title,
+                        body=payload.body,
+                    ),
+                    sound=APNS_SOUND_DEFAULT,
+                ),
+            ),
+        ),
+    )
+
+
+def _build_fcm_message(
+    messaging,
+    *,
+    token: str,
+    device_type: DeviceType,
+    payload: FcmPushPayload,
+):
+    if device_type == DeviceType.ANDROID:
+        return _build_android_message(messaging, token=token, payload=payload)
+    if device_type == DeviceType.IOS:
+        return _build_apns_message(messaging, token=token, payload=payload)
+
+    # 현재 DB에는 ANDROID/IOS만 저장되지만, 예상하지 못한 값이 들어와도
+    # 발송을 완전히 막지 않도록 fallback을 둔다.
+    return messaging.Message(
+        token=token,
+        notification=messaging.Notification(
+            title=payload.title,
+            body=payload.body,
+        ),
+        data=_build_data(payload),
+    )
+
+
 def dispatch_fcm_push_notifications(
     db: Session,
     *,
@@ -144,18 +219,16 @@ def dispatch_fcm_push_notifications(
     failed_count = 0
     invalid_tokens: list[str] = []
 
-    for user_id, token in token_rows:
+    for user_id, token, device_type in token_rows:
         payload = payload_by_user_id.get(user_id)
         if payload is None:
             continue
         try:
-            message = messaging.Message(
+            message = _build_fcm_message(
+                messaging,
                 token=token,
-                notification=messaging.Notification(
-                    title=payload.title,
-                    body=payload.body,
-                ),
-                data=_build_data(payload),
+                device_type=device_type,
+                payload=payload,
             )
             messaging.send(message)
             sent_count += 1

@@ -51,7 +51,7 @@ def find_active_fcm_token_rows(
     *,
     user_ids: list[UUID],
     notification_type=None,
-) -> list[tuple[UUID, str]]:
+) -> list[tuple[UUID, str, DeviceType]]:
     if not user_ids:
         return []
 
@@ -74,8 +74,12 @@ def find_active_fcm_token_rows(
     elif notification_type == NotificationType.PLAN_CONFIRMED:
         conditions.append(User.schedule_confirmed_enabled.is_(True))
 
-    stmt = select(UserFcmToken.user_id, UserFcmToken.fcm_token).where(*conditions)
-    return [(user_id, token) for user_id, token in db.execute(stmt).all()]
+    stmt = select(
+        UserFcmToken.user_id,
+        UserFcmToken.fcm_token,
+        UserFcmToken.device_type,
+    ).where(*conditions)
+    return [(user_id, token, device_type) for user_id, token, device_type in db.execute(stmt).all()]
 
 
 def deactivate_fcm_tokens(
