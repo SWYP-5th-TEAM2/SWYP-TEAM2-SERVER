@@ -127,6 +127,21 @@ REDIS_PORT=6379
 REDIS_PASSWORD=
 ```
 
+DataGrip에서 운영 Redis를 확인할 때는 Redis 포트를 외부에 직접 공개하지 않고
+VM SSH 터널을 사용합니다.
+
+```text
+Redis Host: 127.0.0.1
+Redis Port: 6379
+SSH Host: 운영 VM 주소
+SSH Port: 22
+SSH User: azureuser
+Authentication: VM SSH private key
+```
+
+Redis 자체 인증은 사용하지 않으므로 DataGrip의 Redis 사용자와 비밀번호는
+비워둡니다. Azure NSG에는 Redis `6379` 인바운드 규칙을 추가하지 않습니다.
+
 `.env` 파일은 Git과 Docker build context에 포함하면 안 됩니다.
 
 ## 연결 확인
