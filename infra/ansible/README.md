@@ -127,6 +127,45 @@ REDIS_PORT=6379
 REDIS_PASSWORD=
 ```
 
+DataGrip에서 운영 Redis를 확인할 때는 Redis 포트를 외부에 직접 공개하지 않고
+VM SSH 터널을 사용합니다.
+
+```text
+Redis Host: 127.0.0.1
+Redis Port: 6379
+SSH Host: 운영 VM 주소
+SSH Port: 22
+SSH User: azureuser
+Authentication: VM SSH private key
+```
+
+Redis 자체 인증은 사용하지 않으므로 DataGrip의 Redis 사용자와 비밀번호는
+비워둡니다. Azure NSG에는 Redis `6379` 인바운드 규칙을 추가하지 않습니다.
+
+Firebase FCM을 활성화하기 전에 서비스 계정 JSON 파일을 VM에 배치합니다.
+
+```bash
+sudo mkdir -p /opt/mohaeng-server/secrets
+sudo mv firebase-service-account.json \
+  /opt/mohaeng-server/secrets/firebase-service-account.json
+sudo chown root:root \
+  /opt/mohaeng-server/secrets/firebase-service-account.json
+sudo chmod 700 /opt/mohaeng-server/secrets
+sudo chmod 600 \
+  /opt/mohaeng-server/secrets/firebase-service-account.json
+```
+
+운영 `.env`에는 컨테이너 내부의 마운트 경로를 설정합니다.
+
+```env
+FIREBASE_PUSH_ENABLED=true
+FIREBASE_PROJECT_ID=<firebase-project-id>
+FIREBASE_CREDENTIALS_PATH=/opt/mohaeng-server/secrets/firebase-service-account.json
+```
+
+서비스 계정 파일은 FastAPI 컨테이너에 단일 파일로 read-only 마운트되며
+Git과 Docker 이미지에는 포함하지 않습니다.
+
 `.env` 파일은 Git과 Docker build context에 포함하면 안 됩니다.
 
 ## 연결 확인

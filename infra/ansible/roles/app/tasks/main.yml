@@ -7,6 +7,36 @@
     group: "{{ ansible_user }}"
     mode: "0755"
 
+- name: Secure application secrets directory # secrets 디렉터리 chmod 700
+  ansible.builtin.file:
+    path: "{{ app_dir }}/secrets"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Check Firebase service account file exists # Firebase 서비스 계정 JSON 확인
+  ansible.builtin.stat:
+    path: "{{ app_dir }}/secrets/firebase-service-account.json"
+  register: firebase_service_account_file
+
+- name: Fail if Firebase service account file is missing # 파일이 없는 경우 배포 중단
+  ansible.builtin.fail:
+    msg: >-
+      {{ app_dir }}/secrets/firebase-service-account.json 파일이 없습니다.
+      Firebase 서비스 계정 JSON 파일을 먼저 배치해야 합니다.
+  when: >-
+    not firebase_service_account_file.stat.exists
+    or not firebase_service_account_file.stat.isreg
+
+- name: Restrict Firebase service account file permissions # Firebase 서비스 계정 JSON chmod 600
+  ansible.builtin.file:
+    path: "{{ app_dir }}/secrets/firebase-service-account.json"
+    state: file
+    owner: root
+    group: root
+    mode: "0600"
+
 - name: Deploy docker compose file # 로컬 Ansible 템플릿 파일을 VM에 배포
   ansible.builtin.template:
     src: docker-compose.prod.yml.j2
