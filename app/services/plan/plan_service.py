@@ -46,6 +46,8 @@ from app.core.exceptions import (
     PlanScheduledAtPastException,
     PlanStatusFilterInvalidException,
     PlanTargetMemberMissingException,
+    PlanTargetUserIdInvalidException,
+    PlanTargetUserIdMissingException,
     PlanTicketLookupFailedException,
     PlanTicketNotConfirmedException,
     UnsupportedPlanResponseStatusException,
@@ -86,7 +88,6 @@ from app.schemas.plan import (
     InvitationResponse,
     PickedPlaceCreatorResponse,
     PickedPlaceResponse,
-    PlanListItemResponse,
     PlanListResponse,
     PlanListSummaryResponse,
     PlanMemberResponse,
@@ -100,6 +101,7 @@ from app.schemas.plan import (
     PlanUserPreviewResponse,
     PushNotificationSummaryResponse,
     ReminderResponse,
+    ReminderTestRequest,
     SavePlanResponseRequest,
     SavePlanResponseResponse,
     SavedPlanInfoResponse,
@@ -277,6 +279,12 @@ def _parse_place_id(place_id: object) -> UUID:
 
 def _parse_plan_id(plan_id: object) -> UUID:
     return _parse_uuid(plan_id, PlanIdInvalidException)
+
+
+def _parse_target_user_id(user_id: object) -> UUID:
+    if user_id is None or (isinstance(user_id, str) and not user_id.strip()):
+        raise PlanTargetUserIdMissingException()
+    return _parse_uuid(user_id, PlanTargetUserIdInvalidException)
 
 
 def _parse_datetime(value: object, *, missing_exception, invalid_exception) -> datetime:
@@ -545,6 +553,32 @@ def _build_response_summary(
     )
 
 
+def _build_plan_list_response_summary(
+    *,
+    target_member_count: int,
+    votes: list[Any],
+) -> dict[str, int]:
+    summary = _build_response_summary(
+        target_member_count=target_member_count,
+        votes=votes,
+    )
+    return {
+        "respondedCount": summary.responded_count or 0,
+        "totalTargetCount": summary.total_target_count,
+        "pendingCount": summary.pending_count,
+    }
+
+
+def _build_plan_list_place(*, place: Place | None, status: PlanStatus) -> dict[str, object | None]:
+    data: dict[str, object | None] = {
+        "placeId": place.id if place else None,
+        "title": place.title if place else None,
+    }
+    if status != PlanStatus.VOTING:
+        data["placeName"] = place.name if place else None
+    return data
+
+
 def _get_target_member_count(db: Session, *, plan: Plan) -> int:
     if plan.room_id is None or plan.creator_id is None:
         return 0
@@ -553,6 +587,52 @@ def _get_target_member_count(db: Session, *, plan: Plan) -> int:
         room_id=plan.room_id,
         excluded_user_id=plan.creator_id,
     )
+
+
+def _get_pending_member_ids(db: Session, *, plan: Plan) -> list[UUID]:
+    if plan.room_id is None:
+        return []
+    votes = find_votes_by_plan_id(db=db, plan_id=plan.id)
+    voted_user_ids = {vote.user_id for vote in votes}
+    member_rows = find_room_member_response_rows(
+        db=db,
+        room_id=plan.room_id,
+        excluded_user_id=plan.creator_id,
+    )
+    return [
+        member_id
+        for member_id, _, _, _ in member_rows
+        if member_id not in voted_user_ids
+    ]
+
+
+def _create_and_dispatch_pending_reminders(
+    db: Session,
+    *,
+    plan: Plan,
+    pending_user_ids: list[UUID],
+) -> tuple[list[Any], PushNotificationSummaryResponse]:
+    notification_title = "응답이 곧 마감돼요"
+    notification_content = "아직 응답하지 않은 약속이 있어요."
+    notifications = create_notifications(
+        db=db,
+        user_ids=pending_user_ids,
+        notification_type=NotificationType.RESPONSE_DEADLINE_SOON,
+        title=notification_title,
+        content=notification_content,
+        target_type=NotificationTargetType.PLAN,
+        target_id=plan.id,
+    )
+    push_payloads = _build_push_payloads(
+        notifications=notifications,
+        title=notification_title,
+        body=notification_content,
+    )
+    db.commit()
+    push_summary = _to_push_summary(
+        dispatch_fcm_push_notifications(db=db, payloads=push_payloads)
+    )
+    return notifications, push_summary
 
 
 def get_draw_summary(db: Session, *, user_id: UUID, room_id: object) -> DrawSummaryResponse:
@@ -804,7 +884,7 @@ def get_plan_responses(db: Session, *, user_id: UUID, plan_id: object) -> PlanRe
         raise PlanResponsesLookupFailedException() from exc
 
 
-def send_pending_reminders(db: Session, *, user_id: UUID, plan_id: object) -> ReminderResponse:
+def send_pending_reminders(db: Session, *, user_id: UUID, plan_id: object) -> None:
     parsed_plan_id = _parse_plan_id(plan_id)
     try:
         _ensure_active_user(db=db, user_id=user_id)
@@ -816,44 +896,74 @@ def send_pending_reminders(db: Session, *, user_id: UUID, plan_id: object) -> Re
         if plan.voting_ends_at <= _now():
             raise PlanResponseDeadlinePassedException()
 
-        votes = find_votes_by_plan_id(db=db, plan_id=plan.id)
-        voted_user_ids = {vote.user_id for vote in votes}
-        member_rows = find_room_member_response_rows(
-            db=db,
-            room_id=plan.room_id,
-            excluded_user_id=plan.creator_id,
-        )
-        pending_user_ids = [member_id for member_id, _, _, _ in member_rows if member_id not in voted_user_ids]
+        pending_user_ids = _get_pending_member_ids(db=db, plan=plan)
         if not pending_user_ids:
             raise PlanPendingMemberNotFoundException()
 
-        notification_title = "응답이 곧 마감돼요"
-        notification_content = "아직 응답하지 않은 약속이 있어요."
-        notifications = create_notifications(
+        _create_and_dispatch_pending_reminders(
             db=db,
-            user_ids=pending_user_ids,
-            notification_type=NotificationType.RESPONSE_DEADLINE_SOON,
-            title=notification_title,
-            content=notification_content,
-            target_type=NotificationTargetType.PLAN,
-            target_id=plan.id,
+            plan=plan,
+            pending_user_ids=pending_user_ids,
         )
-        push_payloads = _build_push_payloads(
-            notifications=notifications,
-            title=notification_title,
-            body=notification_content,
-        )
-        db.commit()
-        push_summary = _to_push_summary(
-            dispatch_fcm_push_notifications(db=db, payloads=push_payloads)
+        return None
+    except (
+        PlanCloseAccessDeniedException,
+        PlanAlreadyClosedException,
+        PlanResponseDeadlinePassedException,
+        PlanPendingMemberNotFoundException,
+        PlanNotFoundException,
+        PlanDeletedException,
+        PlanRoomAccessDeniedException,
+        UserNotFoundException,
+        ForbiddenException,
+    ):
+        db.rollback()
+        raise
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise PlanReminderFailedException() from exc
+
+
+def send_pending_reminder_test(
+    db: Session,
+    *,
+    user_id: UUID,
+    plan_id: object,
+    request: ReminderTestRequest | None,
+) -> ReminderResponse:
+    if request is None:
+        raise PlanRequestBodyMissingException()
+    parsed_plan_id = _parse_plan_id(plan_id)
+    target_user_id = _parse_target_user_id(request.target_user_id)
+    try:
+        _ensure_active_user(db=db, user_id=user_id)
+        plan = _ensure_plan_accessible(db=db, plan_id=parsed_plan_id, user_id=user_id)
+        if not _is_host_or_creator(db=db, plan=plan, user_id=user_id):
+            raise PlanCloseAccessDeniedException()
+        if plan.status != PlanStatus.VOTING:
+            raise PlanAlreadyClosedException()
+        if plan.voting_ends_at <= _now():
+            raise PlanResponseDeadlinePassedException()
+
+        pending_user_ids = _get_pending_member_ids(db=db, plan=plan)
+        if target_user_id not in pending_user_ids:
+            raise PlanPendingMemberNotFoundException()
+
+        notifications, push_summary = _create_and_dispatch_pending_reminders(
+            db=db,
+            plan=plan,
+            pending_user_ids=[target_user_id],
         )
         return ReminderResponse(
-            plan_id=plan.id,
-            pending_count=len(pending_user_ids),
+            plan_id=parsed_plan_id,
+            pending_count=1,
             notification_created_count=len(notifications),
             push_notification=push_summary,
         )
     except (
+        PlanRequestBodyMissingException,
+        PlanTargetUserIdMissingException,
+        PlanTargetUserIdInvalidException,
         PlanCloseAccessDeniedException,
         PlanAlreadyClosedException,
         PlanResponseDeadlinePassedException,
@@ -1007,21 +1117,20 @@ def get_plan_list(
             else:
                 entry_view_type = ENTRY_VIEW_CHANGE_RESPONSE
 
-            items.append(
-                PlanListItemResponse(
-                    plan_id=plan.id,
-                    plan_status=_plan_status_value(plan),
-                    title=plan.name or (place.title if place else None),
-                    place=_build_place_summary(place),
-                    scheduled_at=plan.start_time,
-                    response_deadline_at=plan.voting_ends_at if plan.status == PlanStatus.VOTING else None,
-                    my_role="HOST" if is_creator else "PARTICIPANT",
-                    my_response_status=None if is_creator else _response_status_from_vote(my_vote.is_attending if my_vote else None),
-                    entry_view_type=entry_view_type,
-                    created_at=plan.created_at,
-                    confirmed_at=plan.confirmed_at,
+            item_data: dict[str, object] = {
+                "planId": plan.id,
+                "planStatus": _plan_status_value(plan),
+                "place": _build_plan_list_place(place=place, status=plan.status),
+                "scheduledAt": plan.start_time,
+                "myRole": "HOST" if is_creator else "PARTICIPANT",
+                "entryViewType": entry_view_type,
+            }
+            if plan.status == PlanStatus.VOTING:
+                item_data["responseSummary"] = _build_plan_list_response_summary(
+                    target_member_count=_get_target_member_count(db=db, plan=plan),
+                    votes=find_votes_by_plan_id(db=db, plan_id=plan.id),
                 )
-            )
+            items.append(item_data)
 
         return PlanListResponse(
             room_id=parsed_room_id,
