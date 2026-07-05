@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.responses import success_response
 from app.core.security.dependencies import get_current_user_id
 from app.database.session import get_db
-from app.schemas.plan import CreatePlanRequest, DrawPlaceRequest, SavePlanResponseRequest
+from app.schemas.plan import CreatePlanRequest, DrawPlaceRequest, ReminderTestRequest, SavePlanResponseRequest
 from app.services.plan import (
     close_plan,
     create_plan,
@@ -18,6 +18,7 @@ from app.services.plan import (
     get_ticket,
     save_plan_response,
     send_pending_reminders,
+    send_pending_reminder_test,
 )
 
 router = APIRouter()
@@ -113,8 +114,23 @@ def send_reminders(
     db: Session = Depends(get_db),
     user_id: UUID = Depends(get_current_user_id),
 ):
-    response = send_pending_reminders(db=db, user_id=user_id, plan_id=plan_id)
-    return success_response(data=response, message="미응답자 알림 발송 성공")
+    send_pending_reminders(db=db, user_id=user_id, plan_id=plan_id)
+    return success_response(data=None, message="미응답자 알림 발송 성공")
+
+
+@router.post(
+    "/{plan_id}/reminders/test",
+    summary="미응답자 테스트 알림 발송",
+    description="특정 미응답 멤버 1명에게 미응답자 알림을 테스트 발송합니다.",
+)
+def send_reminder_test(
+    plan_id: str,
+    request: ReminderTestRequest | None = Body(default=None),
+    db: Session = Depends(get_db),
+    user_id: UUID = Depends(get_current_user_id),
+):
+    response = send_pending_reminder_test(db=db, user_id=user_id, plan_id=plan_id, request=request)
+    return success_response(data=response, message="미응답자 테스트 알림 발송 성공")
 
 
 @router.post(

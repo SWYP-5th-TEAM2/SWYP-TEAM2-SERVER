@@ -69,3 +69,20 @@ class SavePlanResponseRequest(CamelModel):
             },
         },
     )
+
+
+class ReminderTestRequest(CamelModel):
+    target_user_id: Any = None
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "required": ["targetUserId"],
+            "properties": {
+                "targetUserId": {
+                    "type": "string",
+                    "example": "string_user_id",
+                    "description": "테스트 알림을 보낼 미응답 대상 사용자 ID",
+                }
+            },
+        },
+    )

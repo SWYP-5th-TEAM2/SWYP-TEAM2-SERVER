@@ -6,6 +6,7 @@ __all__ = [
     "create_plan",
     "get_plan_responses",
     "send_pending_reminders",
+    "send_pending_reminder_test",
     "close_plan",
     "get_plan_list",
     "get_invitation",

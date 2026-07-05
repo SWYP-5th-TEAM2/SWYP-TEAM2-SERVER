@@ -202,6 +202,8 @@ __all__ = [
     "PlanStatusFilterInvalidException",
     "PlanPageValueInvalidException",
     "PlanResponseStatusMissingException",
+    "PlanTargetUserIdMissingException",
+    "PlanTargetUserIdInvalidException",
     "UnsupportedPlanResponseStatusException",
     "PlanRoomAccessDeniedException",
     "PlanCloseAccessDeniedException",

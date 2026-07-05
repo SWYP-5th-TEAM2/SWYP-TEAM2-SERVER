@@ -177,6 +177,7 @@ def _plan_requested_item(db: Session, *, notification: Notification, plan: Plan)
         "notificationId": notification.id,
         "type": notification.type.value,
         "isRead": notification.is_read,
+        "createdAt": notification.created_at,
     }
     creator_row = find_user_preview_for_notification(db=db, user_id=plan.creator_id)
     if creator_row is not None:
@@ -201,6 +202,7 @@ def _plan_confirmed_item(db: Session, *, notification: Notification, plan: Plan)
         "notificationId": notification.id,
         "type": notification.type.value,
         "isRead": notification.is_read,
+        "createdAt": notification.created_at,
         "plan": {
             "planId": plan.id,
             "status": _plan_status_for_notification(plan),
@@ -223,6 +225,7 @@ def _member_going_item(db: Session, *, notification: Notification, vote: Vote) -
         "notificationId": notification.id,
         "type": notification.type.value,
         "isRead": notification.is_read,
+        "createdAt": notification.created_at,
     }
     actor_row = find_user_preview_for_notification(db=db, user_id=vote.user_id)
     if actor_row is not None:
@@ -246,6 +249,7 @@ def _quiet_recommendation_item(db: Session, *, notification: Notification) -> di
         "notificationId": notification.id,
         "type": notification.type.value,
         "isRead": notification.is_read,
+        "createdAt": notification.created_at,
     }
 
 
@@ -254,6 +258,7 @@ def _fallback_item(notification: Notification) -> dict[str, object]:
         "notificationId": notification.id,
         "type": notification.type.value,
         "isRead": notification.is_read,
+        "createdAt": notification.created_at,
     }
 
 

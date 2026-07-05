@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from app.schemas.common import CamelModel
@@ -157,25 +158,27 @@ class PlanListSummaryResponse(CamelModel):
     recruiting_count: int
 
 
+class PlanListResponseSummaryResponse(CamelModel):
+    responded_count: int
+    total_target_count: int
+    pending_count: int
+
+
 class PlanListItemResponse(CamelModel):
     plan_id: UUID
     plan_status: str
-    title: str | None
-    place: PlanPlaceSummaryResponse
+    place: dict[str, Any]
     scheduled_at: datetime
-    response_deadline_at: datetime | None = None
     my_role: str
-    my_response_status: str | None
     entry_view_type: str
-    created_at: datetime
-    confirmed_at: datetime | None = None
+    response_summary: PlanListResponseSummaryResponse | None = None
 
 
 class PlanListResponse(CamelModel):
     room_id: UUID
     status: str
     summary: PlanListSummaryResponse
-    plans: list[PlanListItemResponse]
+    plans: list[dict[str, Any]]
     page_info: PlanPageInfoResponse
 
 
