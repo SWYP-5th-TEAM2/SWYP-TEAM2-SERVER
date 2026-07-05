@@ -40,7 +40,7 @@ def get_plan_draw_summary(
 @router.post(
     "/draw",
     summary="장소 후보 뽑기",
-    description="딸깍 화면에서 뽑기 버튼을 눌렀을 때 장소 후보와 추천 약속 시간을 반환합니다.",
+    description="딸깍 화면에서 뽑기 버튼을 눌렀을 때 장소 후보와 추천 약속 시간을 반환합니다. 재뽑기 시 excludedPlaceIds로 이번 화면에서 이미 뽑힌 장소 후보를 제외합니다.",
 )
 def draw_plan_place(
     request: DrawPlaceRequest | None = Body(default=None),
@@ -54,11 +54,11 @@ def draw_plan_place(
 @router.get(
     "/",
     summary="약속 목록 조회",
-    description="약속 탭에서 전체, 확정, 모집중 약속 목록을 조회합니다.",
+    description="약속 탭에서 전체, 응답 중, 확정, 완료 약속 목록을 조회합니다.",
 )
 def get_plans(
     room_id: str | None = Query(default=None, alias="roomId", description="약속 목록을 조회할 방 ID"),
-    status: str | None = Query(default="ALL", description="약속 상태 필터"),
+    status: str | None = Query(default="ALL", description="약속 상태 필터. ALL, VOTING, CONFIRMED, COMPLETED를 지원합니다. RECRUITING은 기존 앱 호환용 입력 alias입니다."),
     page: str | None = Query(default="0", description="페이지 번호"),
     size: str | None = Query(default="20", description="한 페이지당 조회 개수"),
     db: Session = Depends(get_db),

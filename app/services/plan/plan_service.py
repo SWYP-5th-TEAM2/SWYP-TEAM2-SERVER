@@ -116,14 +116,21 @@ RECOMMEND_TIME_SLOT_MINUTES = 10
 RECOMMEND_BUSINESS_START = time(hour=11)
 RECOMMEND_BUSINESS_END = time(hour=20)
 RECOMMEND_SEARCH_DAYS = 30
-TARGET_MEMBER_PREVIEW_LIMIT = 4
+MAX_DRAW_EXCLUDED_PLACE_IDS = 200
 
 RESPONSE_GOING = "GOING"
 RESPONSE_NOT_GOING = "NOT_GOING"
 RESPONSE_PENDING = "PENDING"
 
 PLAN_STATUS_ALL = "ALL"
-PLAN_STATUS_RECRUITING = "RECRUITING"
+LEGACY_PLAN_STATUS_RECRUITING = "RECRUITING"  # 기존 앱 요청 호환용 입력 alias. 응답값으로는 사용하지 않는다.
+PLAN_LIST_VISIBLE_STATUSES = (PlanStatus.VOTING, PlanStatus.CONFIRMED, PlanStatus.COMPLETED)
+PLAN_RESPONSE_OPEN_STATUS = PlanStatus.VOTING
+
+ENTRY_VIEW_STATUS = "STATUS"
+ENTRY_VIEW_RESPONSE = "RESPONSE"
+ENTRY_VIEW_CHANGE_RESPONSE = "CHANGE_RESPONSE"
+ENTRY_VIEW_TICKET = "TICKET"
 
 
 PYTHON_WEEKDAY_TO_DAY_OF_WEEK = {
@@ -321,13 +328,44 @@ def _parse_status_filter(value: str | None) -> tuple[str, list[PlanStatus] | Non
     normalized = value.strip().upper()
     if normalized == PLAN_STATUS_ALL:
         return PLAN_STATUS_ALL, None
-    if normalized in {PLAN_STATUS_RECRUITING, PlanStatus.VOTING.value}:
-        return PLAN_STATUS_RECRUITING, [PlanStatus.VOTING]
+    if normalized in {LEGACY_PLAN_STATUS_RECRUITING, PlanStatus.VOTING.value}:
+        return PlanStatus.VOTING.value, [PlanStatus.VOTING]
     if normalized == PlanStatus.CONFIRMED.value:
         return PlanStatus.CONFIRMED.value, [PlanStatus.CONFIRMED]
     if normalized == PlanStatus.COMPLETED.value:
         return PlanStatus.COMPLETED.value, [PlanStatus.COMPLETED]
     raise PlanStatusFilterInvalidException()
+
+
+def _parse_draw_excluded_place_ids(request: DrawPlaceRequest) -> list[UUID]:
+    excluded_place_ids: list[UUID] = []
+    seen_place_ids: set[UUID] = set()
+
+    def append_place_id(value: object) -> None:
+        if value in (None, ""):
+            return
+        parsed_place_id = _parse_place_id(value)
+        if parsed_place_id not in seen_place_ids:
+            excluded_place_ids.append(parsed_place_id)
+            seen_place_ids.add(parsed_place_id)
+
+    raw_excluded_place_ids = request.excluded_place_ids
+    if raw_excluded_place_ids in (None, ""):
+        return excluded_place_ids
+    if not isinstance(raw_excluded_place_ids, list):
+        raise PlanPlaceIdInvalidException()
+    if len(raw_excluded_place_ids) > MAX_DRAW_EXCLUDED_PLACE_IDS:
+        raise PlanPlaceIdInvalidException()
+
+    for place_id in raw_excluded_place_ids:
+        append_place_id(place_id)
+    return excluded_place_ids
+
+
+def _append_unique_place_id(place_ids: list[UUID], place_id: UUID) -> list[UUID]:
+    if place_id in set(place_ids):
+        return place_ids
+    return [*place_ids, place_id]
 
 
 def _parse_response_status(value: object) -> bool:
@@ -386,6 +424,12 @@ def _response_status_from_vote(is_attending: bool | None) -> str:
     return RESPONSE_GOING if is_attending else RESPONSE_NOT_GOING
 
 
+def _plan_status_value(plan: Plan) -> str:
+    # API 응답에는 DB enum 값을 그대로 사용한다.
+    # 예전 문서/앱의 RECRUITING은 요청 alias로만 허용하고, 응답값은 VOTING으로 통일한다.
+    return plan.status.value
+
+
 def _build_user_preview(
     user_id: UUID | None,
     nickname: str | None,
@@ -430,7 +474,7 @@ def _build_invitation_place(place: Place | None) -> PlanInvitationPlaceResponse:
 def _build_plan_info(plan: Plan) -> PlanResponsesPlanResponse:
     return PlanResponsesPlanResponse(
         plan_id=plan.id,
-        status=plan.status.value,
+        status=_plan_status_value(plan),
         scheduled_at=plan.start_time,
         response_deadline_at=plan.voting_ends_at,
     )
@@ -529,24 +573,20 @@ def draw_place(db: Session, *, user_id: UUID, request: DrawPlaceRequest | None) 
     if request is None:
         raise PlanRequestBodyMissingException()
     room_id = _parse_room_id(request.room_id)
-    previous_place_id = None
-    if request.previous_place_id not in (None, ""):
-        previous_place_id = _parse_place_id(request.previous_place_id)
+    excluded_place_ids = _parse_draw_excluded_place_ids(request)
 
     try:
         _ensure_active_user(db=db, user_id=user_id)
         _ensure_room_member(db=db, room_id=room_id, user_id=user_id)
 
-        if count_drawable_places(db=db, room_id=room_id) == 0:
+        if count_drawable_places(db=db, room_id=room_id, exclude_place_ids=excluded_place_ids) == 0:
             raise PlanNoDrawablePlaceException()
 
         row = find_random_drawable_place(
             db=db,
             room_id=room_id,
-            exclude_place_id=previous_place_id,
+            exclude_place_ids=excluded_place_ids,
         )
-        if row is None and previous_place_id is not None:
-            row = find_random_drawable_place(db=db, room_id=room_id)
         if row is None:
             raise PlanNoDrawablePlaceException()
 
@@ -574,6 +614,12 @@ def draw_place(db: Session, *, user_id: UUID, request: DrawPlaceRequest | None) 
             room_id=room_id,
             excluded_user_id=user_id,
         )
+        next_excluded_place_ids = _append_unique_place_id(excluded_place_ids, place.id)
+        remaining_drawable_place_count = count_drawable_places(
+            db=db,
+            room_id=room_id,
+            exclude_place_ids=next_excluded_place_ids,
+        )
 
         return DrawPlaceResponse(
             picked_place=PickedPlaceResponse(
@@ -590,6 +636,9 @@ def draw_place(db: Session, *, user_id: UUID, request: DrawPlaceRequest | None) 
             recommended_response_deadline_at=recommended_response_deadline_at,
             drawn_at=drawn_at,
             target_member_count=target_count,
+            next_excluded_place_ids=next_excluded_place_ids,
+            remaining_drawable_place_count=remaining_drawable_place_count,
+            can_redraw=remaining_drawable_place_count > 0,
         )
     except (
         PlanNoDrawablePlaceException,
@@ -679,16 +728,14 @@ def create_plan(db: Session, *, user_id: UUID, request: CreatePlanRequest | None
             dispatch_fcm_push_notifications(db=db, payloads=push_payloads)
         )
 
-        preview_rows = target_rows[:TARGET_MEMBER_PREVIEW_LIMIT]
         return CreatePlanResponse(
             plan_id=plan.id,
             room_id=room_id,
-            plan_status=plan.status.value,
+            plan_status=_plan_status_value(plan),
             scheduled_at=plan.start_time,
             response_deadline_at=plan.voting_ends_at,
             target_member_count=target_count,
-            target_members=[_build_user_preview(*row) for row in preview_rows],
-            remaining_target_member_count=max(target_count - len(preview_rows), 0),
+            target_members=[_build_user_preview(*row) for row in target_rows],
             notification_created_count=len(notifications),
             push_notification=push_summary,
             created_at=plan.created_at,
@@ -928,54 +975,46 @@ def get_plan_list(
     try:
         _ensure_active_user(db=db, user_id=user_id)
         _ensure_room_member(db=db, room_id=parsed_room_id, user_id=user_id)
-        total_count = count_plans_by_status(db=db, room_id=parsed_room_id)
+        list_statuses = list(statuses) if statuses is not None else list(PLAN_LIST_VISIBLE_STATUSES)
+        total_count = sum(
+            count_plans_by_status(db=db, room_id=parsed_room_id, status=status_value)
+            for status_value in PLAN_LIST_VISIBLE_STATUSES
+        )
         filtered_count = total_count if statuses is None else sum(
             count_plans_by_status(db=db, room_id=parsed_room_id, status=status_value)
-            for status_value in statuses
+            for status_value in list_statuses
         )
         confirmed_count = count_plans_by_status(db=db, room_id=parsed_room_id, status=PlanStatus.CONFIRMED)
         recruiting_count = count_plans_by_status(db=db, room_id=parsed_room_id, status=PlanStatus.VOTING)
         rows = find_plan_list_rows(
             db=db,
             room_id=parsed_room_id,
-            statuses=statuses,
+            statuses=list_statuses,
             offset=parsed_page * parsed_size,
             limit=parsed_size,
         )
         total_pages = ceil(filtered_count / parsed_size) if filtered_count else 0
         items = []
         for plan, place in rows:
-            votes = find_votes_by_plan_id(db=db, plan_id=plan.id)
-            target_member_count = _get_target_member_count(db=db, plan=plan)
-            response_summary = _build_response_summary(
-                target_member_count=target_member_count,
-                votes=votes,
-            )
             my_vote = find_vote_by_plan_and_user(db=db, plan_id=plan.id, user_id=user_id)
             is_creator = plan.creator_id == user_id
             if plan.status == PlanStatus.CONFIRMED or plan.status == PlanStatus.COMPLETED:
-                entry_view_type = "TICKET"
+                entry_view_type = ENTRY_VIEW_TICKET
             elif is_creator:
-                entry_view_type = "STATUS"
+                entry_view_type = ENTRY_VIEW_STATUS
             elif my_vote is None:
-                entry_view_type = "RESPONSE"
+                entry_view_type = ENTRY_VIEW_RESPONSE
             else:
-                entry_view_type = "CHANGE_RESPONSE"
-
-            participant_count = None
-            if plan.status in {PlanStatus.CONFIRMED, PlanStatus.COMPLETED}:
-                participant_count = response_summary.going_count + (1 if plan.creator_id else 0)
+                entry_view_type = ENTRY_VIEW_CHANGE_RESPONSE
 
             items.append(
                 PlanListItemResponse(
                     plan_id=plan.id,
-                    plan_status=plan.status.value,
+                    plan_status=_plan_status_value(plan),
                     title=plan.name or (place.title if place else None),
                     place=_build_place_summary(place),
                     scheduled_at=plan.start_time,
                     response_deadline_at=plan.voting_ends_at if plan.status == PlanStatus.VOTING else None,
-                    response_summary=response_summary if plan.status == PlanStatus.VOTING else None,
-                    participant_count=participant_count,
                     my_role="HOST" if is_creator else "PARTICIPANT",
                     my_response_status=None if is_creator else _response_status_from_vote(my_vote.is_attending if my_vote else None),
                     entry_view_type=entry_view_type,
@@ -985,7 +1024,6 @@ def get_plan_list(
             )
 
         return PlanListResponse(
-            server_time=_now(),
             room_id=parsed_room_id,
             status=normalized_status,
             summary=PlanListSummaryResponse(
@@ -1021,6 +1059,8 @@ def get_invitation(db: Session, *, user_id: UUID, plan_id: object) -> Invitation
         _ensure_active_user(db=db, user_id=user_id)
         plan = _ensure_plan_accessible(db=db, plan_id=parsed_plan_id, user_id=user_id)
         plan, place, _, creator_nickname, creator_profile_image_url = _get_plan_context(db=db, plan_id=plan.id)
+        if plan.status != PLAN_RESPONSE_OPEN_STATUS:
+            raise PlanAlreadyClosedException()
         if plan.creator_id == user_id:
             raise PlanResponseAccessDeniedException()
         votes = find_votes_by_plan_id(db=db, plan_id=plan.id)
@@ -1032,7 +1072,7 @@ def get_invitation(db: Session, *, user_id: UUID, plan_id: object) -> Invitation
         return InvitationResponse(
             plan_id=plan.id,
             room_id=plan.room_id,
-            plan_status=plan.status.value,
+            plan_status=_plan_status_value(plan),
             proposed_by=_build_user_basic(plan.creator_id, creator_nickname),
             place=_build_invitation_place(place),
             scheduled_at=plan.start_time,
@@ -1044,6 +1084,7 @@ def get_invitation(db: Session, *, user_id: UUID, plan_id: object) -> Invitation
         )
     except (
         PlanResponseAccessDeniedException,
+        PlanAlreadyClosedException,
         PlanNotFoundException,
         PlanDeletedException,
         PlanRoomAccessDeniedException,

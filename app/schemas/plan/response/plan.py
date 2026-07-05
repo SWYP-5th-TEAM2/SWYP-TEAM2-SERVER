@@ -77,6 +77,9 @@ class DrawPlaceResponse(CamelModel):
     recommended_response_deadline_at: datetime
     drawn_at: datetime
     target_member_count: int
+    next_excluded_place_ids: list[UUID]
+    remaining_drawable_place_count: int
+    can_redraw: bool
 
 
 class CreatePlanResponse(CamelModel):
@@ -87,7 +90,6 @@ class CreatePlanResponse(CamelModel):
     response_deadline_at: datetime
     target_member_count: int
     target_members: list[PlanUserPreviewResponse]
-    remaining_target_member_count: int
     notification_created_count: int
     push_notification: PushNotificationSummaryResponse
     created_at: datetime
@@ -162,8 +164,6 @@ class PlanListItemResponse(CamelModel):
     place: PlanPlaceSummaryResponse
     scheduled_at: datetime
     response_deadline_at: datetime | None = None
-    response_summary: PlanResponseSummaryResponse | None = None
-    participant_count: int | None = None
     my_role: str
     my_response_status: str | None
     entry_view_type: str
@@ -172,7 +172,6 @@ class PlanListItemResponse(CamelModel):
 
 
 class PlanListResponse(CamelModel):
-    server_time: datetime
     room_id: UUID
     status: str
     summary: PlanListSummaryResponse

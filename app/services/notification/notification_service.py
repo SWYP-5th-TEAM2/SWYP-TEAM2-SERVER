@@ -60,8 +60,6 @@ MAX_PAGE_SIZE = 50
 RESPONSE_GOING = "GOING"
 RESPONSE_NOT_GOING = "NOT_GOING"
 RESPONSE_PENDING = "PENDING"
-RECRUITING_STATUS = "RECRUITING"
-
 RESPONSE_NOTIFICATION_TYPES = {
     NotificationType.PLAN_REQUESTED,
     NotificationType.RESPONSE_DEADLINE_SOON,
@@ -136,8 +134,7 @@ def _ensure_own_notification(
 def _plan_status_for_notification(plan: Plan | None) -> str | None:
     if plan is None:
         return None
-    if plan.status == PlanStatus.VOTING:
-        return RECRUITING_STATUS
+    # 외부 응답에서는 RECRUITING으로 변환하지 않고 DB enum 값인 VOTING을 그대로 사용한다.
     return plan.status.value
 
 
@@ -160,7 +157,7 @@ def _plan_requested_item(db: Session, *, notification: Notification, plan: Plan)
     item: dict[str, object] = {
         "notificationId": notification.id,
         "type": notification.type.value,
-        "is_read": notification.is_read,
+        "isRead": notification.is_read,
     }
     creator_row = find_user_preview_for_notification(db=db, user_id=plan.creator_id)
     if creator_row is not None:
@@ -184,7 +181,7 @@ def _plan_confirmed_item(db: Session, *, notification: Notification, plan: Plan)
     item: dict[str, object] = {
         "notificationId": notification.id,
         "type": notification.type.value,
-        "is_read": notification.is_read,
+        "isRead": notification.is_read,
         "plan": {
             "planId": plan.id,
             "status": _plan_status_for_notification(plan),
@@ -206,7 +203,7 @@ def _member_going_item(db: Session, *, notification: Notification, vote: Vote) -
     item: dict[str, object] = {
         "notificationId": notification.id,
         "type": notification.type.value,
-        "is_read": notification.is_read,
+        "isRead": notification.is_read,
     }
     actor_row = find_user_preview_for_notification(db=db, user_id=vote.user_id)
     if actor_row is not None:
@@ -226,10 +223,10 @@ def _member_going_item(db: Session, *, notification: Notification, vote: Vote) -
 
 
 def _quiet_recommendation_item(db: Session, *, notification: Notification) -> dict[str, object]:
-    # 최신 알림 목록 명세에서는 QUIET_RECOMMENDATION 예시가 notificationId/type만 포함한다.
     return {
         "notificationId": notification.id,
         "type": notification.type.value,
+        "isRead": notification.is_read,
     }
 
 
@@ -237,7 +234,7 @@ def _fallback_item(notification: Notification) -> dict[str, object]:
     return {
         "notificationId": notification.id,
         "type": notification.type.value,
-        "is_read": notification.is_read,
+        "isRead": notification.is_read,
     }
 
 
@@ -370,7 +367,7 @@ def get_notification_vote_screen(
             notification_id=notification.id,
             plan_id=plan.id,
             room_id=plan.room_id,
-            plan_status=plan.status.value,
+            plan_status=_plan_status_for_notification(plan),
             proposed_by=proposed_by,
             place=NotificationInvitationPlaceResponse(
                 place_id=place.id if place else None,

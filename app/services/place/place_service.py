@@ -267,12 +267,9 @@ def _ensure_place_accessible(db: Session, *, place_id: UUID, user_id: UUID) -> P
 
 
 def _ensure_modify_permission(place: Place, *, user_id: UUID, delete: bool = False) -> None:
-    # 현재는 등록자만 수정/삭제 가능하게 둔다.
-    # 추후 방장 권한까지 허용할 경우 room_members.role 검사를 추가하면 된다.
-    if place.user_id != user_id:
-        if delete:
-            raise PlaceDeleteAccessDeniedException()
-        raise PlaceModifyAccessDeniedException()
+    # 수정/삭제 권한은 _ensure_place_accessible()에서 방 멤버 여부로 검증한다.
+    # 같은 방의 활성 멤버라면 본인이 등록하지 않은 장소 후보도 수정/삭제할 수 있다.
+    return None
 
 
 def _build_creator(user_id: UUID | None, nickname: str | None) -> PlaceCreatorResponse:
