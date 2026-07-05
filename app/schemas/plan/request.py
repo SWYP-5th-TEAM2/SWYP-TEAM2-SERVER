@@ -7,17 +7,19 @@ from app.schemas.common import CamelModel
 
 class DrawPlaceRequest(CamelModel):
     room_id: Any = None
-    previous_place_id: Any = None
+    excluded_place_ids: list[Any] | None = None
 
     model_config = ConfigDict(
         json_schema_extra={
             "required": ["roomId"],
             "properties": {
                 "roomId": {"type": "string", "example": "string_room_id"},
-                "previousPlaceId": {
-                    "type": "string",
+                "excludedPlaceIds": {
+                    "type": "array",
+                    "items": {"type": "string"},
                     "nullable": True,
-                    "example": "string_place_id",
+                    "example": ["string_place_id_1", "string_place_id_2"],
+                    "description": "현재 뽑기 화면에서 이미 나왔던 장소 후보 ID 목록",
                 },
             },
         },
@@ -45,6 +47,7 @@ class CreatePlanRequest(CamelModel):
                     "type": "string",
                     "format": "date-time",
                     "example": "2026-06-19T21:00:00+09:00",
+                    "description": "장소 후보 뽑기 API에서 받은 recommendedResponseDeadlineAt 값을 전달합니다.",
                 },
             },
         },

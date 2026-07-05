@@ -23,10 +23,42 @@ from app.models import (
 ACTIVE_PLAN_STATUSES = {PlanStatus.VOTING, PlanStatus.CONFIRMED}
 
 
-def count_drawable_places(db: Session, *, room_id: UUID) -> int:
-    stmt = select(func.count(Place.id)).where(
+def _used_plan_place_ids_subquery(room_id: UUID):
+    # 약속 목록에 이미 노출되는 장소 후보는 딸깍 후보에서 제외한다.
+    # 상태와 무관하게 삭제되지 않은 plan에 연결된 placeId를 제외 대상으로 본다.
+    return select(Plan.place_id).where(
+        Plan.room_id == room_id,
+        Plan.place_id.is_not(None),
+        Plan.deleted_at.is_(None),
+    )
+
+
+def _drawable_place_conditions(
+    *,
+    room_id: UUID,
+    exclude_place_ids: list[UUID] | None = None,
+) -> list[object]:
+    conditions = [
         Place.room_id == room_id,
         Place.deleted_at.is_(None),
+        ~Place.id.in_(_used_plan_place_ids_subquery(room_id)),
+    ]
+    if exclude_place_ids:
+        conditions.append(~Place.id.in_(exclude_place_ids))
+    return conditions
+
+
+def count_drawable_places(
+    db: Session,
+    *,
+    room_id: UUID,
+    exclude_place_ids: list[UUID] | None = None,
+) -> int:
+    stmt = select(func.count(Place.id)).where(
+        *_drawable_place_conditions(
+            room_id=room_id,
+            exclude_place_ids=exclude_place_ids,
+        )
     )
     return int(db.execute(stmt).scalar_one())
 
@@ -35,19 +67,17 @@ def find_random_drawable_place(
     db: Session,
     *,
     room_id: UUID,
-    exclude_place_id: UUID | None = None,
+    exclude_place_ids: list[UUID] | None = None,
 ) -> tuple[Place, str | None] | None:
-    conditions = [
-        Place.room_id == room_id,
-        Place.deleted_at.is_(None),
-    ]
-    if exclude_place_id is not None:
-        conditions.append(Place.id != exclude_place_id)
-
     stmt = (
         select(Place, User.nickname)
         .outerjoin(User, User.id == Place.user_id)
-        .where(*conditions)
+        .where(
+            *_drawable_place_conditions(
+                room_id=room_id,
+                exclude_place_ids=exclude_place_ids,
+            )
+        )
         .order_by(func.random())
         .limit(1)
     )
