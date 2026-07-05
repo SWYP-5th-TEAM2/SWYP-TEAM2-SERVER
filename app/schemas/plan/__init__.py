@@ -5,6 +5,7 @@ __all__ = [
     "DrawPlaceRequest",
     "CreatePlanRequest",
     "SavePlanResponseRequest",
+    "ReminderTestRequest",
     "PlanUserPreviewResponse",
     "PlanUserBasicResponse",
     "PlanPlaceSummaryResponse",

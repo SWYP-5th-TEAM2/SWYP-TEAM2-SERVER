@@ -21,6 +21,7 @@ __all__ = [
     "ClosePlanResponse",
     "TicketLookupResponse",
     "PlanListSummaryResponse",
+    "PlanListResponseSummaryResponse",
     "PlanListItemResponse",
     "PlanListResponse",
     "InvitationResponse",

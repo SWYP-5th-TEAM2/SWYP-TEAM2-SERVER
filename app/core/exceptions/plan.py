@@ -82,6 +82,16 @@ class PlanResponseStatusMissingException(BadRequestException):
         super().__init__(code="PLAN_RESPONSE_STATUS_MISSING", message="응답 상태를 선택해주세요.")
 
 
+class PlanTargetUserIdMissingException(BadRequestException):
+    def __init__(self) -> None:
+        super().__init__(code="PLAN_TARGET_USER_ID_MISSING", message="알림을 보낼 사용자 ID를 입력해주세요.")
+
+
+class PlanTargetUserIdInvalidException(BadRequestException):
+    def __init__(self) -> None:
+        super().__init__(code="INVALID_PLAN_TARGET_USER_ID", message="올바르지 않은 사용자 ID입니다.")
+
+
 class UnsupportedPlanResponseStatusException(BadRequestException):
     def __init__(self) -> None:
         super().__init__(code="UNSUPPORTED_PLAN_RESPONSE_STATUS", message="지원하지 않는 응답 상태입니다.")
