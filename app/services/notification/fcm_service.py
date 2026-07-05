@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -8,6 +9,8 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.models import DeviceType, NotificationType
 from app.repository.fcm import deactivate_fcm_tokens, find_active_fcm_token_rows
+
+logger = logging.getLogger(__name__)
 
 PUSH_STATUS_REQUESTED = "REQUESTED"
 PUSH_STATUS_PARTIAL_FAILED = "PARTIAL_FAILED"
@@ -54,14 +57,23 @@ def _build_data(payload: FcmPushPayload) -> dict[str, str]:
 
 def _is_invalid_token_error(exc: Exception) -> bool:
     text = str(exc).lower()
+    # 토큰 자체가 만료/삭제/오염된 경우에만 비활성화한다.
+    # "invalid-argument" 같은 포괄적인 오류는 메시지 구성 또는 Firebase 프로젝트 설정 문제일 수 있으므로
+    # 여기서 바로 토큰을 비활성화하지 않는다.
     invalid_keywords = (
         "registration-token-not-registered",
         "unregistered",
         "invalid registration token",
-        "invalid-argument",
+        "invalid-registration-token",
         "requested entity was not found",
     )
     return any(keyword in text for keyword in invalid_keywords)
+
+
+def _mask_token(token: str) -> str:
+    if len(token) <= 16:
+        return "***"
+    return f"{token[:8]}...{token[-6:]}"
 
 
 def _get_messaging_module():
@@ -69,6 +81,7 @@ def _get_messaging_module():
         import firebase_admin
         from firebase_admin import credentials, messaging
     except ImportError:
+        logger.exception("firebase-admin package is not installed")
         return None
 
     try:
@@ -88,50 +101,39 @@ def _get_messaging_module():
                 firebase_admin.initialize_app(options=options or None, name=app_name)
         return messaging
     except Exception:
+        logger.exception("Failed to initialize Firebase Admin SDK")
         return None
 
 
-def _build_android_message(messaging, *, token: str, payload: FcmPushPayload):
-    """Build Android-specific FCM message.
+def _build_android_config(messaging, *, payload: FcmPushPayload):
+    """Android notification 옵션.
 
-    Android는 AndroidConfig/AndroidNotification 쪽에 title/body를 넣어 전송한다.
-    공통 data payload는 알림 클릭 후 화면 이동에 사용한다.
+    title/body는 top-level notification에도 넣고 AndroidNotification에도 넣는다.
+    이렇게 하면 토큰에 저장된 deviceType이 잘못 들어간 경우에도 기본 알림 렌더링이 깨질 가능성을 줄일 수 있다.
     """
-    return messaging.Message(
-        token=token,
-        data=_build_data(payload),
-        android=messaging.AndroidConfig(
-            priority=ANDROID_FCM_PRIORITY_HIGH,
-            notification=messaging.AndroidNotification(
-                title=payload.title,
-                body=payload.body,
-            ),
+    return messaging.AndroidConfig(
+        priority=ANDROID_FCM_PRIORITY_HIGH,
+        notification=messaging.AndroidNotification(
+            title=payload.title,
+            body=payload.body,
         ),
     )
 
 
-def _build_apns_message(messaging, *, token: str, payload: FcmPushPayload):
-    """Build iOS/APNs-specific FCM message.
-
-    iOS는 APNSConfig/APNSPayload/ApsAlert 쪽에 title/body를 넣어 전송한다.
-    APNs alert push로 명확히 처리되도록 header와 sound를 함께 지정한다.
-    """
-    return messaging.Message(
-        token=token,
-        data=_build_data(payload),
-        apns=messaging.APNSConfig(
-            headers={
-                "apns-push-type": APNS_PUSH_TYPE_ALERT,
-                "apns-priority": APNS_PRIORITY_IMMEDIATE,
-            },
-            payload=messaging.APNSPayload(
-                aps=messaging.Aps(
-                    alert=messaging.ApsAlert(
-                        title=payload.title,
-                        body=payload.body,
-                    ),
-                    sound=APNS_SOUND_DEFAULT,
+def _build_apns_config(messaging, *, payload: FcmPushPayload):
+    """iOS/APNs alert push 옵션."""
+    return messaging.APNSConfig(
+        headers={
+            "apns-push-type": APNS_PUSH_TYPE_ALERT,
+            "apns-priority": APNS_PRIORITY_IMMEDIATE,
+        },
+        payload=messaging.APNSPayload(
+            aps=messaging.Aps(
+                alert=messaging.ApsAlert(
+                    title=payload.title,
+                    body=payload.body,
                 ),
+                sound=APNS_SOUND_DEFAULT,
             ),
         ),
     )
@@ -144,20 +146,27 @@ def _build_fcm_message(
     device_type: DeviceType,
     payload: FcmPushPayload,
 ):
-    if device_type == DeviceType.ANDROID:
-        return _build_android_message(messaging, token=token, payload=payload)
-    if device_type == DeviceType.IOS:
-        return _build_apns_message(messaging, token=token, payload=payload)
+    """Build a platform-safe FCM message.
 
-    # 현재 DB에는 ANDROID/IOS만 저장되지만, 예상하지 못한 값이 들어와도
-    # 발송을 완전히 막지 않도록 fallback을 둔다.
+    기존 구현은 deviceType에 따라 AndroidConfig 또는 APNSConfig 중 하나만 넣었다.
+    그런데 앱에서 deviceType이 잘못 저장되었거나 iOS/Android 연동 중 토큰 정보가 꼬이면
+    반대 플랫폼 토큰에 표시용 payload가 충분히 전달되지 않을 수 있다.
+
+    FCM은 토큰 플랫폼에 맞는 설정만 사용하므로, top-level notification과 Android/APNs 설정을 함께 넣어
+    Android/iOS 모두 같은 서버 payload로 받을 수 있게 한다.
+    """
+    data = _build_data(payload)
+    data["deviceType"] = device_type.value
+
     return messaging.Message(
         token=token,
         notification=messaging.Notification(
             title=payload.title,
             body=payload.body,
         ),
-        data=_build_data(payload),
+        data=data,
+        android=_build_android_config(messaging, payload=payload),
+        apns=_build_apns_config(messaging, payload=payload),
     )
 
 
@@ -187,6 +196,11 @@ def dispatch_fcm_push_notifications(
         notification_type=payloads[0].notification_type if payloads else None,
     )
     if not token_rows:
+        logger.info(
+            "FCM push skipped: no active tokens or notification setting disabled. targetUsers=%s notificationType=%s",
+            len(target_user_ids),
+            payloads[0].notification_type.value if payloads else None,
+        )
         return FcmDispatchResult(
             target_user_count=len(target_user_ids),
             requested_token_count=0,
@@ -196,6 +210,11 @@ def dispatch_fcm_push_notifications(
         )
 
     if not settings.firebase_push_enabled:
+        logger.info(
+            "FCM push skipped: FIREBASE_PUSH_ENABLED=false. targetUsers=%s tokens=%s",
+            len(target_user_ids),
+            len(token_rows),
+        )
         return FcmDispatchResult(
             target_user_count=len(target_user_ids),
             requested_token_count=len(token_rows),
@@ -206,6 +225,11 @@ def dispatch_fcm_push_notifications(
 
     messaging = _get_messaging_module()
     if messaging is None:
+        logger.error(
+            "FCM push failed: Firebase messaging module is unavailable. targetUsers=%s tokens=%s",
+            len(target_user_ids),
+            len(token_rows),
+        )
         return FcmDispatchResult(
             target_user_count=len(target_user_ids),
             requested_token_count=len(token_rows),
@@ -234,6 +258,13 @@ def dispatch_fcm_push_notifications(
             sent_count += 1
         except Exception as exc:  # FCM 실패는 API 실패로 전파하지 않음
             failed_count += 1
+            logger.warning(
+                "FCM send failed. userId=%s deviceType=%s token=%s error=%s",
+                user_id,
+                device_type.value if hasattr(device_type, "value") else device_type,
+                _mask_token(token),
+                exc,
+            )
             if _is_invalid_token_error(exc):
                 invalid_tokens.append(token)
 

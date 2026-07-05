@@ -21,6 +21,9 @@ from app.core.exceptions import (
     NotificationResponseAccessDeniedException,
     NotificationVoteScreenLookupFailedException,
     PlanDeletedException,
+    RoomAccessDeniedException,
+    RoomIdInvalidException,
+    RoomNotFoundException,
     UserNotFoundException,
 )
 from app.models import Notification, NotificationTargetType, NotificationType, Plan, PlanStatus, Vote
@@ -81,6 +84,22 @@ def _parse_uuid(value: object, exception_factory) -> UUID:
 
 def _parse_notification_id(notification_id: object) -> UUID:
     return _parse_uuid(notification_id, NotificationIdInvalidException)
+
+
+def _parse_optional_room_id(room_id: object) -> UUID | None:
+    if room_id is None or room_id == "":
+        return None
+    return _parse_uuid(room_id, RoomIdInvalidException)
+
+
+def _ensure_room_filter_access(db: Session, *, user_id: UUID, room_id: UUID | None) -> None:
+    if room_id is None:
+        return
+    room = find_room_by_id_for_notification(db=db, room_id=room_id)
+    if room is None:
+        raise RoomNotFoundException()
+    if find_active_room_member(db=db, room_id=room_id, user_id=user_id) is None:
+        raise RoomAccessDeniedException()
 
 
 def _parse_page(value: object) -> int:
@@ -281,22 +300,29 @@ def get_notification_list(
     user_id: UUID,
     page: object,
     size: object,
+    room_id: object = None,
 ) -> NotificationListResponse:
     parsed_page = _parse_page(page)
     parsed_size = _parse_size(size)
+    parsed_room_id = _parse_optional_room_id(room_id)
     try:
         _ensure_active_user(db=db, user_id=user_id)
-        total_count = count_notifications_for_user(db=db, user_id=user_id)
+        _ensure_room_filter_access(db=db, user_id=user_id, room_id=parsed_room_id)
+        total_count = count_notifications_for_user(db=db, user_id=user_id, room_id=parsed_room_id)
         notifications = find_notifications_for_user(
             db=db,
             user_id=user_id,
             offset=parsed_page * parsed_size,
             limit=parsed_size,
+            room_id=parsed_room_id,
         )
         total_pages = ceil(total_count / parsed_size) if total_count else 0
         return NotificationListResponse(
             server_time=_now(),
-            notifications=[_build_notification_item(db=db, notification=notification) for notification in notifications],
+            notifications=[
+                _build_notification_item(db=db, notification=notification)
+                for notification in notifications
+            ],
             page_info=NotificationPageInfoResponse(
                 page=parsed_page,
                 size=parsed_size,
@@ -305,7 +331,14 @@ def get_notification_list(
                 has_next=parsed_page + 1 < total_pages,
             ),
         )
-    except (NotificationPageValueInvalidException, UserNotFoundException, ForbiddenException):
+    except (
+        NotificationPageValueInvalidException,
+        RoomIdInvalidException,
+        RoomNotFoundException,
+        RoomAccessDeniedException,
+        UserNotFoundException,
+        ForbiddenException,
+    ):
         raise
     except SQLAlchemyError as exc:
         db.rollback()

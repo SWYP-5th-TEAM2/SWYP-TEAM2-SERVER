@@ -22,12 +22,13 @@ router = APIRouter()
     description="S13 알림 탭에서 사용자에게 도착한 알림 목록을 조회합니다.",
 )
 def get_notifications(
+    room_id: str | None = Query(default=None, alias="roomId", description="알림 목록을 조회할 방 ID"),
     page: str | None = Query(default="0", description="페이지 번호"),
     size: str | None = Query(default="20", description="한 페이지당 조회 개수"),
     db: Session = Depends(get_db),
     user_id: UUID = Depends(get_current_user_id),
 ):
-    response = get_notification_list(db=db, user_id=user_id, page=page, size=size)
+    response = get_notification_list(db=db, user_id=user_id, room_id=room_id, page=page, size=size)
     return success_response(data=response, message="알림 목록 조회 성공")
 
 
