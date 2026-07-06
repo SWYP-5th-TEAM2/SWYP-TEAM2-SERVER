@@ -60,6 +60,7 @@ from app.schemas.place import (
     CreatePlaceResponse,
     DeletePlaceResponse,
     PlaceCreatorResponse,
+    PlaceCreatorWithProfileResponse,
     PlaceDetailResponse,
     PlaceListResponse,
     PlacePageInfoResponse,
@@ -279,6 +280,18 @@ def _build_creator(user_id: UUID | None, nickname: str | None) -> PlaceCreatorRe
     )
 
 
+def _build_creator_with_profile(
+    user_id: UUID | None,
+    nickname: str | None,
+    profile_image_url: str | None,
+) -> PlaceCreatorWithProfileResponse:
+    return PlaceCreatorWithProfileResponse(
+        user_id=user_id,
+        nickname=nickname,
+        profile_image_url=profile_image_url,
+    )
+
+
 def _find_image_id_by_url(db: Session, image_url: str | None) -> UUID | None:
     if image_url is None:
         return None
@@ -288,18 +301,27 @@ def _find_image_id_by_url(db: Session, image_url: str | None) -> UUID | None:
     return image.id
 
 
-def _build_summary(place: Place, nickname: str | None) -> PlaceSummaryResponse:
+def _build_summary(
+    place: Place,
+    nickname: str | None,
+    profile_image_url: str | None,
+) -> PlaceSummaryResponse:
     return PlaceSummaryResponse(
         place_id=place.id,
         title=place.title,
         place_name=place.name,
         address=place.location,
         thumbnail_url=place.place_image,
-        created_by=_build_creator(place.user_id, nickname),
+        created_by=_build_creator_with_profile(place.user_id, nickname, profile_image_url),
     )
 
 
-def _build_detail(place: Place, nickname: str | None, image_url: str | None) -> PlaceDetailResponse:
+def _build_detail(
+    place: Place,
+    nickname: str | None,
+    profile_image_url: str | None,
+    image_url: str | None,
+) -> PlaceDetailResponse:
     return PlaceDetailResponse(
         place_id=place.id,
         room_id=place.room_id,
@@ -311,7 +333,7 @@ def _build_detail(place: Place, nickname: str | None, image_url: str | None) -> 
         thumbnail_url=place.place_image,
         link_url=place.url,
         image_url=image_url,
-        created_by=_build_creator(place.user_id, nickname),
+        created_by=_build_creator_with_profile(place.user_id, nickname, profile_image_url),
     )
 
 
@@ -355,7 +377,10 @@ def get_places(
             room_id=room.id,
             room_name=room.name,
             place_count=total_count,
-            places=[_build_summary(place, nickname) for place, nickname in rows],
+            places=[
+                _build_summary(place, nickname, profile_image_url)
+                for place, nickname, profile_image_url in rows
+            ],
             page_info=PlacePageInfoResponse(
                 page=parsed_page,
                 size=parsed_size,
@@ -385,8 +410,8 @@ def get_place_detail(
         row = find_place_detail_row(db=db, place_id=place.id)
         if row is None:
             raise PlaceNotFoundException()
-        place, nickname, image_url = row
-        return _build_detail(place, nickname, image_url)
+        place, nickname, profile_image_url, image_url = row
+        return _build_detail(place, nickname, profile_image_url, image_url)
     except (PlaceNotFoundException, PlaceDeletedException, PlaceRoomAccessDeniedException, PlaceRoomNotFoundException, UserNotFoundException, ForbiddenException):
         raise
     except SQLAlchemyError as exc:
@@ -552,7 +577,7 @@ def update_place(
         db.commit()
 
         row = find_place_detail_row(db=db, place_id=place.id)
-        image_url = row[2] if row else None
+        image_url = row[3] if row else None
         return UpdatePlaceResponse(
             place_id=place.id,
             room_id=place.room_id,
