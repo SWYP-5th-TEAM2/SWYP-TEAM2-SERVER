@@ -191,8 +191,8 @@ class InvitationResponse(CamelModel):
     scheduled_at: datetime
     response_deadline_at: datetime
     server_time: datetime
-    going_member_count: int
-    going_members: list[PlanUserPreviewResponse]
+    response_summary: PlanResponseSummaryResponse
+    members: list[PlanMemberResponse]
     my_response_status: str
 
 

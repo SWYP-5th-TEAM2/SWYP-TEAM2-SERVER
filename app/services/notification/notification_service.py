@@ -41,17 +41,18 @@ from app.repository.notification import (
     mark_all_notifications_read,
     mark_notification_read,
 )
-from app.repository.plan import find_members_by_ids, find_vote_by_plan_and_user, find_votes_by_plan_id
+from app.repository.plan import find_room_member_response_rows, find_vote_by_plan_and_user, find_votes_by_plan_id
 from app.repository.room import find_active_room_member
 from app.repository.user import find_user_by_id
 from app.schemas.notification import (
     NotificationInvitationPlaceResponse,
     NotificationListResponse,
+    NotificationMemberResponse,
     NotificationPageInfoResponse,
     NotificationReadAllResponse,
     NotificationReadResponse,
+    NotificationResponseSummaryResponse,
     NotificationUserBasicResponse,
-    NotificationUserPreviewResponse,
     NotificationVoteScreenResponse,
 )
 
@@ -161,6 +162,43 @@ def _response_status_from_vote(vote: Vote | None) -> str:
     if vote is None:
         return RESPONSE_PENDING
     return RESPONSE_GOING if vote.is_attending else RESPONSE_NOT_GOING
+
+
+def _build_vote_screen_response_members(
+    *,
+    member_rows: list[tuple[UUID, str | None, str | None, object]],
+    votes: list[Vote],
+) -> tuple[NotificationResponseSummaryResponse, list[NotificationMemberResponse]]:
+    vote_by_user_id = {vote.user_id: vote for vote in votes}
+    members: list[NotificationMemberResponse] = []
+    going_count = 0
+    not_going_count = 0
+
+    for member_id, nickname, profile_image_url, _ in member_rows:
+        response_status = _response_status_from_vote(vote_by_user_id.get(member_id))
+        if response_status == RESPONSE_GOING:
+            going_count += 1
+        elif response_status == RESPONSE_NOT_GOING:
+            not_going_count += 1
+        members.append(
+            NotificationMemberResponse(
+                user_id=member_id,
+                nickname=nickname,
+                profile_image_url=profile_image_url,
+                response_status=response_status,
+            )
+        )
+
+    total_target_count = len(members)
+    responded_count = going_count + not_going_count
+    response_summary = NotificationResponseSummaryResponse(
+        going_count=going_count,
+        not_going_count=not_going_count,
+        pending_count=max(total_target_count - responded_count, 0),
+        total_target_count=total_target_count,
+        responded_count=responded_count,
+    )
+    return response_summary, members
 
 
 def _actor_dict(*, user_id: UUID | None, nickname: str | None) -> dict[str, object | None] | None:
@@ -391,15 +429,8 @@ def get_notification_vote_screen(
         )
         votes = find_votes_by_plan_id(db=db, plan_id=plan.id)
         my_vote = find_vote_by_plan_and_user(db=db, plan_id=plan.id, user_id=user_id)
-        going_user_ids = [vote.user_id for vote in votes if vote.is_attending]
-        going_members = [
-            NotificationUserPreviewResponse(
-                user_id=row[0],
-                nickname=row[1],
-                profile_image_url=row[2],
-            )
-            for row in find_members_by_ids(db=db, user_ids=going_user_ids)
-        ]
+        member_rows = find_room_member_response_rows(db=db, room_id=plan.room_id, excluded_user_id=plan.creator_id)
+        response_summary, members = _build_vote_screen_response_members(member_rows=member_rows, votes=votes)
 
         return NotificationVoteScreenResponse(
             notification_id=notification.id,
@@ -416,8 +447,8 @@ def get_notification_vote_screen(
             scheduled_at=plan.start_time,
             response_deadline_at=plan.voting_ends_at,
             server_time=_now(),
-            going_member_count=len(going_members),
-            going_members=going_members,
+            response_summary=response_summary,
+            members=members,
             my_response_status=_response_status_from_vote(my_vote),
         )
     except (

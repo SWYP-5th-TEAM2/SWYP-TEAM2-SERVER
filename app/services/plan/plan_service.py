@@ -18,7 +18,6 @@ from app.core.exceptions import (
     PlanIdInvalidException,
     PlanInvitationLookupFailedException,
     PlanListLookupFailedException,
-    PlanNoAttendingMemberException,
     PlanNoDrawablePlaceException,
     PlanNotFoundException,
     PlanPageValueInvalidException,
@@ -486,6 +485,43 @@ def _build_plan_info(plan: Plan) -> PlanResponsesPlanResponse:
         scheduled_at=plan.start_time,
         response_deadline_at=plan.voting_ends_at,
     )
+
+
+def _build_invitation_response_members(
+    *,
+    member_rows: list[tuple[UUID, str | None, str | None, RoomMemberRole]],
+    votes: list[Any],
+) -> tuple[PlanResponseSummaryResponse, list[PlanMemberResponse]]:
+    vote_status_by_user_id = {vote.user_id: vote.is_attending for vote in votes}
+    members: list[PlanMemberResponse] = []
+    going_count = 0
+    not_going_count = 0
+
+    for member_id, nickname, profile_image_url, _ in member_rows:
+        response_status = _response_status_from_vote(vote_status_by_user_id.get(member_id))
+        if response_status == RESPONSE_GOING:
+            going_count += 1
+        elif response_status == RESPONSE_NOT_GOING:
+            not_going_count += 1
+        members.append(
+            PlanMemberResponse(
+                user_id=member_id,
+                nickname=nickname,
+                profile_image_url=profile_image_url,
+                response_status=response_status,
+            )
+        )
+
+    total_target_count = len(members)
+    responded_count = going_count + not_going_count
+    response_summary = PlanResponseSummaryResponse(
+        going_count=going_count,
+        not_going_count=not_going_count,
+        pending_count=max(total_target_count - responded_count, 0),
+        total_target_count=total_target_count,
+        responded_count=responded_count,
+    )
+    return response_summary, members
 
 
 def _to_push_summary(result: FcmDispatchResult) -> PushNotificationSummaryResponse:
@@ -1006,9 +1042,11 @@ def close_plan(db: Session, *, user_id: UUID, plan_id: object) -> ClosePlanRespo
             raise PlanAlreadyClosedException()
 
         votes = find_votes_by_plan_id(db=db, plan_id=plan.id)
+        # 응답한 참석자가 없어도 발의자 1인으로 약속을 확정할 수 있다.
+        # 기존에는 GOING 응답자가 없으면 409를 반환했지만, 최신 정책은
+        # 아무도 응답하지 않았거나 모두 못 간다고 응답한 경우에도
+        # 발의자가 약속을 마감하면 발의자만 포함한 티켓을 생성한다.
         attending_user_ids = [vote.user_id for vote in votes if vote.is_attending]
-        if not attending_user_ids:
-            raise PlanNoAttendingMemberException()
 
         participant_ids = []
         if plan.creator_id is not None:
@@ -1054,7 +1092,6 @@ def close_plan(db: Session, *, user_id: UUID, plan_id: object) -> ClosePlanRespo
     except (
         PlanCloseAccessDeniedException,
         PlanAlreadyClosedException,
-        PlanNoAttendingMemberException,
         PlanNotFoundException,
         PlanDeletedException,
         PlanRoomAccessDeniedException,
@@ -1175,9 +1212,7 @@ def get_invitation(db: Session, *, user_id: UUID, plan_id: object) -> Invitation
         votes = find_votes_by_plan_id(db=db, plan_id=plan.id)
         my_vote = find_vote_by_plan_and_user(db=db, plan_id=plan.id, user_id=user_id)
         member_rows = find_room_member_response_rows(db=db, room_id=plan.room_id, excluded_user_id=plan.creator_id)
-        going_user_ids = [vote.user_id for vote in votes if vote.is_attending]
-        going_rows = find_members_by_ids(db=db, user_ids=going_user_ids)
-        going_members = [_build_user_preview(*row) for row in going_rows]
+        response_summary, members = _build_invitation_response_members(member_rows=member_rows, votes=votes)
         return InvitationResponse(
             plan_id=plan.id,
             room_id=plan.room_id,
@@ -1187,8 +1222,8 @@ def get_invitation(db: Session, *, user_id: UUID, plan_id: object) -> Invitation
             scheduled_at=plan.start_time,
             response_deadline_at=plan.voting_ends_at,
             server_time=_now(),
-            going_member_count=len(going_members),
-            going_members=going_members,
+            response_summary=response_summary,
+            members=members,
             my_response_status=_response_status_from_vote(my_vote.is_attending if my_vote else None),
         )
     except (
