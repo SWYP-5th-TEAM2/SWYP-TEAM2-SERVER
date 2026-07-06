@@ -6,6 +6,7 @@ __all__ = [
     "CreatePlaceResponse",
     "DeletePlaceResponse",
     "PlaceCreatorResponse",
+    "PlaceCreatorWithProfileResponse",
     "PlaceDetailResponse",
     "PlaceListResponse",
     "PlacePageInfoResponse",

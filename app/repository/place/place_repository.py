@@ -2,7 +2,7 @@ from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import and_, func, or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from app.models import Image, Place, Plan, PlanStatus, User
 
@@ -34,15 +34,24 @@ def find_place_detail_row(
     db: Session,
     *,
     place_id: UUID,
-) -> tuple[Place, str | None, str | None] | None:
-    source_image = Image
+) -> tuple[Place, str | None, str | None, str | None] | None:
+    profile_image = aliased(Image)
+    source_image = aliased(Image)
     stmt = (
         select(
             Place,
             User.nickname,
+            profile_image.image_url,
             source_image.image_url,
         )
         .outerjoin(User, User.id == Place.user_id)
+        .outerjoin(
+            profile_image,
+            and_(
+                profile_image.id == User.profile_image_id,
+                profile_image.deleted_at.is_(None),
+            ),
+        )
         .outerjoin(
             source_image,
             and_(
@@ -58,8 +67,8 @@ def find_place_detail_row(
     result = db.execute(stmt).one_or_none()
     if result is None:
         return None
-    place, nickname, image_url = result
-    return place, nickname, image_url
+    place, nickname, profile_image_url, image_url = result
+    return place, nickname, profile_image_url, image_url
 
 
 def find_place_list_rows(
@@ -69,7 +78,7 @@ def find_place_list_rows(
     keyword: str | None,
     offset: int,
     limit: int,
-) -> list[tuple[Place, str | None]]:
+) -> list[tuple[Place, str | None, str | None]]:
     conditions = [
         Place.room_id == room_id,
         Place.deleted_at.is_(None),
@@ -84,9 +93,17 @@ def find_place_list_rows(
             )
         )
 
+    profile_image = aliased(Image)
     stmt = (
-        select(Place, User.nickname)
+        select(Place, User.nickname, profile_image.image_url)
         .outerjoin(User, User.id == Place.user_id)
+        .outerjoin(
+            profile_image,
+            and_(
+                profile_image.id == User.profile_image_id,
+                profile_image.deleted_at.is_(None),
+            ),
+        )
         .where(*conditions)
         .order_by(Place.created_at.desc(), Place.id.desc())
         .offset(offset)

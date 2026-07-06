@@ -8,6 +8,12 @@ class PlaceCreatorResponse(CamelModel):
     nickname: str | None
 
 
+class PlaceCreatorWithProfileResponse(CamelModel):
+    user_id: UUID | None
+    nickname: str | None
+    profile_image_url: str | None = None
+
+
 class PlacePageInfoResponse(CamelModel):
     page: int
     size: int
@@ -22,7 +28,7 @@ class PlaceSummaryResponse(CamelModel):
     place_name: str | None
     address: str | None
     thumbnail_url: str | None
-    created_by: PlaceCreatorResponse
+    created_by: PlaceCreatorWithProfileResponse
 
 
 class PlaceListResponse(CamelModel):
@@ -44,7 +50,7 @@ class PlaceDetailResponse(CamelModel):
     thumbnail_url: str | None
     link_url: str | None
     image_url: str | None
-    created_by: PlaceCreatorResponse
+    created_by: PlaceCreatorWithProfileResponse
 
 
 class CreatePlaceResponse(CamelModel):
