@@ -55,7 +55,7 @@ from app.repository.room import (
     find_active_room_member,
     find_earliest_active_member,
     find_my_active_rooms,
-    find_random_room_member_preview_names,
+    find_random_room_member_previews,
     find_representative_plan_by_room_id,
     find_room_by_id,
     find_room_by_id_including_deleted,
@@ -72,6 +72,7 @@ from app.schemas.room import (
     MyRoomsResponse,
     MyRoomSummaryResponse,
     RoomDetailResponse,
+    RoomMemberPreviewResponse,
     RoomMemberResponse,
 )
 
@@ -421,6 +422,11 @@ def get_my_rooms(
                 if representative_plan is not None
                 else 0
             )
+            member_previews = find_random_room_member_previews(
+                db=db,
+                room_id=room.id,
+                limit=ROOM_MEMBER_PREVIEW_LIMIT,
+            )
 
             room_summaries.append(
                 MyRoomSummaryResponse(
@@ -431,11 +437,13 @@ def get_my_rooms(
                         db=db,
                         room_id=room.id,
                     ),
-                    member_preview_names=find_random_room_member_preview_names(
-                        db=db,
-                        room_id=room.id,
-                        limit=ROOM_MEMBER_PREVIEW_LIMIT,
-                    ),
+                    member_previews=[
+                        RoomMemberPreviewResponse(
+                            member_name=member_name,
+                            member_profile_image=member_profile_image,
+                        )
+                        for member_name, member_profile_image in member_previews
+                    ],
                     plan_status=(
                         representative_plan.status.value
                         if representative_plan is not None

@@ -245,15 +245,26 @@ def count_active_room_members(
     return int(result.scalar_one())
 
 
-def find_random_room_member_preview_names(
+def find_random_room_member_previews(
     db: Session,
     *,
     room_id: UUID,
     limit: int,
-) -> list[str]:
+) -> list[tuple[str, str | None]]:
     stmt = (
-        select(User.nickname)
+        select(
+            User.nickname,
+            Image.image_url,
+        )
         .join(RoomMember, RoomMember.user_id == User.id)
+        .outerjoin(
+            Image,
+            and_(
+                Image.id == User.profile_image_id,
+                Image.user_id == User.id,
+                Image.deleted_at.is_(None),
+            ),
+        )
         .where(
             RoomMember.room_id == room_id,
             RoomMember.deleted_at.is_(None),
@@ -263,8 +274,8 @@ def find_random_room_member_preview_names(
     )
     result = db.execute(stmt)
     return [
-        nickname or ""
-        for nickname in result.scalars().all()
+        (nickname or "", profile_image)
+        for nickname, profile_image in result.all()
     ]
 
 
