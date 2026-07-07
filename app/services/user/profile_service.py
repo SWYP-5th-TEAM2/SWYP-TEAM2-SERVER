@@ -31,6 +31,7 @@ from app.schemas.user import (
     MyRoomResponse,
     UpdateUserProfileRequest,
     UpdateUserProfileResponse,
+    UserOnboardingResponse,
     UserProfileResponse,
 )
 
@@ -215,4 +216,17 @@ def get_user_profile(
             for room_id, room_name, member_count in room_summaries
         ],
         recurring_schedule_count=recurring_schedule_count,
+    )
+
+
+def get_user_onboarding_status(
+    db: Session,
+    *,
+    user_id: UUID,
+) -> UserOnboardingResponse:
+    user = _ensure_active_user(db, user_id)
+    # 가입 직후 created_at과 updated_at이 같고, 온보딩 후 updated_at이 수정되어 온보딩 여부 판별 가능
+    return UserOnboardingResponse(
+        user_id=user.id,
+        is_onboarding_completed=user.created_at != user.updated_at,
     )

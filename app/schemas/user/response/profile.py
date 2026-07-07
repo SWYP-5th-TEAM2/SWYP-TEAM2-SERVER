@@ -20,3 +20,8 @@ class UserProfileResponse(CamelModel):
     email: str | None
     my_rooms: list[MyRoomResponse]
     recurring_schedule_count: int
+
+
+class UserOnboardingResponse(CamelModel):
+    user_id: UUID
+    is_onboarding_completed: bool
