@@ -8,6 +8,7 @@ __all__ = [
     "save_fcm_token",
     "update_user_profile",
     "get_user_profile",
+    "get_user_onboarding_status",
     "get_recurring_schedules",
     "create_recurring_schedule",
     "update_recurring_schedule",

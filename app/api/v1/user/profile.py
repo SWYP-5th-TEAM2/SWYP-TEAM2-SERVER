@@ -7,7 +7,11 @@ from app.core.responses import success_response
 from app.core.security.dependencies import get_current_user_id
 from app.database.session import get_db
 from app.schemas.user import UpdateUserProfileRequest
-from app.services.user import get_user_profile, update_user_profile
+from app.services.user import (
+    get_user_onboarding_status,
+    get_user_profile,
+    update_user_profile,
+)
 
 router = APIRouter()
 
@@ -51,4 +55,24 @@ def get_my_profile(
     return success_response(
         data=response,
         message="사용자 정보 조회 성공",
+    )
+
+
+@router.get(
+    "/me/onboarding",
+    summary="온보딩 완료 여부 확인",
+    description="로그인한 사용자의 온보딩 완료 여부를 조회합니다.",
+)
+def get_my_onboarding_status(
+    db: Session = Depends(get_db),
+    user_id: UUID = Depends(get_current_user_id),
+):
+    response = get_user_onboarding_status(
+        db=db,
+        user_id=user_id,
+    )
+
+    return success_response(
+        data=response,
+        message="온보딩 확인 성공",
     )
