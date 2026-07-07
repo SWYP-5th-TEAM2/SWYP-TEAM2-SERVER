@@ -37,6 +37,21 @@ class NotificationInvitationPlaceResponse(CamelModel):
     thumbnail_url: str | None = None
 
 
+class NotificationResponseSummaryResponse(CamelModel):
+    going_count: int
+    not_going_count: int
+    pending_count: int
+    total_target_count: int
+    responded_count: int
+
+
+class NotificationMemberResponse(CamelModel):
+    user_id: UUID
+    nickname: str | None
+    profile_image_url: str | None
+    response_status: str
+
+
 class NotificationVoteScreenResponse(CamelModel):
     notification_id: UUID
     plan_id: UUID
@@ -47,8 +62,8 @@ class NotificationVoteScreenResponse(CamelModel):
     scheduled_at: datetime
     response_deadline_at: datetime
     server_time: datetime
-    going_member_count: int
-    going_members: list[NotificationUserPreviewResponse]
+    response_summary: NotificationResponseSummaryResponse
+    members: list[NotificationMemberResponse]
     my_response_status: str
 
 
