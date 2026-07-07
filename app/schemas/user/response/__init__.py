@@ -8,6 +8,7 @@ __all__ = [
     "UpdateUserProfileResponse",
     "MyRoomResponse",
     "UserProfileResponse",
+    "UserOnboardingResponse",
     "RecurringScheduleResponse",
     "RecurringScheduleListResponse",
     "RecurringScheduleMutationResponse",
