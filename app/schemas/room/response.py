@@ -31,12 +31,17 @@ class RoomDetailResponse(CamelModel):
     members: list[RoomMemberResponse]
 
 
+class RoomMemberPreviewResponse(CamelModel):
+    member_name: str
+    member_profile_image: str | None
+
+
 class MyRoomSummaryResponse(CamelModel):
     room_id: UUID
     room_name: str
     color: str
     member_count: int
-    member_preview_names: list[str]
+    member_previews: list[RoomMemberPreviewResponse]
     plan_status: str | None
     vote_member_count: int
 

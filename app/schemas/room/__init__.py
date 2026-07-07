@@ -6,6 +6,7 @@ from app.schemas.room.response import (
     MyRoomsResponse,
     MyRoomSummaryResponse,
     RoomDetailResponse,
+    RoomMemberPreviewResponse,
     RoomMemberResponse,
 )
 
@@ -18,5 +19,6 @@ __all__ = [
     "MyRoomsResponse",
     "MyRoomSummaryResponse",
     "RoomDetailResponse",
+    "RoomMemberPreviewResponse",
     "RoomMemberResponse",
 ]
