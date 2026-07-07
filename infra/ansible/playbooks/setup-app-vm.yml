@@ -10,3 +10,4 @@
     - nginx
     - app
     - certbot
+    - monitoring_agent

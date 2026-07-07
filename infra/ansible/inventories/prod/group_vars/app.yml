@@ -15,3 +15,15 @@ certbot_email: "wldnjstj99@gmail.com"
 
 acr_name: mohaengacr
 acr_login_server: mohaengacr-a9cfdnd5e7c3gefw.azurecr.io
+
+# 모니터링 에이전트
+monitoring_agent_dir: /opt/mohaeng-monitoring-agent
+
+node_exporter_image: prom/node-exporter:v1.8.2
+node_exporter_container_name: mohaeng-node-exporter
+# 외부 접근 열고, 실제 접근 제한은 Azure NSG에서 Prometheus IP/CIDR만 허용
+node_exporter_bind_address: "0.0.0.0"
+node_exporter_port: 9100
+
+# Grafana Alloy는 다음 단계에서 같은 monitoring_agent compose에 추가할 예정이다.
+alloy_http_port: 12345

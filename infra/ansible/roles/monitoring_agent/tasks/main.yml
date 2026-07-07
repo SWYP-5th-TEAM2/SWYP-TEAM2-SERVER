@@ -1,0 +1,29 @@
+---
+- name: Create monitoring agent directory # 모니터링 에이전트 디렉터리 생성
+  ansible.builtin.file:
+    path: "{{ monitoring_agent_dir }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+
+- name: Deploy monitoring agent compose file # 모니터링 에이전트 컨테이너 정의 배포
+  ansible.builtin.template:
+    src: docker-compose.monitoring-agent.yml.j2
+    dest: "{{ monitoring_agent_dir }}/docker-compose.yml"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"
+
+- name: Pull node exporter image # 배포 전에 node exporter 이미지 pull
+  community.docker.docker_compose_v2_pull:
+    project_src: "{{ monitoring_agent_dir }}"
+    services:
+      - node-exporter
+
+- name: Start node exporter container # Prometheus가 VM 메트릭을 scrape할 수 있도록 컨테이너 실행
+  community.docker.docker_compose_v2:
+    project_src: "{{ monitoring_agent_dir }}"
+    state: present
+    services:
+      - node-exporter
