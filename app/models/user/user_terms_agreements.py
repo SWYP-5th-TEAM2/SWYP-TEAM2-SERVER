@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index
+from sqlalchemy import DateTime, ForeignKey, Index, text
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 
@@ -15,6 +15,13 @@ class UserTermsAgreements(Base, TimestampMixin):
     __table_args__ = (
         Index("ix_user_terms_agreements_user_id", "user_id"),
         Index("ix_user_terms_agreements_term_id", "term_id"),
+        Index(
+            "uq_user_terms_agreements_active_user_term",
+            "user_id",
+            "term_id",
+            unique=True,
+            postgresql_where=text("revoked_at IS NULL AND deleted_at IS NULL"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
