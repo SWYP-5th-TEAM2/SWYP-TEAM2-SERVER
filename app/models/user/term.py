@@ -1,7 +1,7 @@
 import uuid
 from datetime import date
 
-from sqlalchemy import Boolean, Date, Enum, String, text
+from sqlalchemy import Boolean, Date, Enum, String
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 
@@ -17,7 +17,6 @@ class Term(Base, TimestampMixin):
         PostgresUUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
-        server_default=text("gen_random_uuid()"),
         comment="약관 ID",
     )
 
