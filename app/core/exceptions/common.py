@@ -86,6 +86,22 @@ class InternalServerException(AppException):
         )
 
 
+class TermsNotFoundException(NotFoundException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="TERMS_NOT_FOUND",
+            message="약관을 찾을 수 없습니다.",
+        )
+
+
+class TermsLookupFailedException(InternalServerException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="TERMS_LOOKUP_FAILED",
+            message="서버 내부 오류가 발생했습니다.",
+        )
+
+
 # 502 BAD GATEWAY
 class BadGatewayException(AppException):
     def __init__(

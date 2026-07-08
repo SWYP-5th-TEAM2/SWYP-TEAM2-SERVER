@@ -24,3 +24,7 @@ class WithdrawalReason(str, enum.Enum):
     DIFFICULT_TO_USE = "DIFFICULT_TO_USE" # 서비스 이용이 불편해요
     NO_TIME_TO_USE = "NO_TIME_TO_USE" # 이용할 시간이 없어요
     ETC = "ETC" # 기타
+
+class TermType(str, enum.Enum):
+    SERVICE = "SERVICE"
+    PRIVACY = "PRIVACY"
