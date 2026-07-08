@@ -3,6 +3,7 @@ from app.schemas.user.request.profile import *
 from app.schemas.user.request.recurring_schedule import *
 from app.schemas.user.request.notification_settings import *
 from app.schemas.user.request.withdrawal import *
+from app.schemas.user.request.terms import *
 
 __all__ = [
     "SaveFcmTokenRequest",
@@ -12,4 +13,5 @@ __all__ = [
     "UpdateRecurringScheduleActivationRequest",
     "UpdateNotificationSettingsRequest",
     "UserWithdrawalRequest",
+    "AgreeTermsRequest",
 ]

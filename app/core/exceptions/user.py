@@ -107,3 +107,35 @@ class ProfileUpdateFailedException(InternalServerException):
             code="PROFILE_UPDATE_FAILED",
             message="닉네임 수정 중 오류가 발생했습니다.",
         )
+
+
+class TermsAgreementRequestBodyMissingException(BadRequestException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="TERMS_AGREEMENT_REQUEST_BODY_MISSING",
+            message="약관 동의 정보가 필요합니다.",
+        )
+
+
+class TermsAgreementFieldsMissingException(BadRequestException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="TERMS_AGREEMENT_FIELDS_MISSING",
+            message="약관 동의 정보가 누락되었습니다.",
+        )
+
+
+class RequiredTermsNotAgreedException(BadRequestException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="REQUIRED_TERMS_NOT_AGREED",
+            message="필수 약관에 동의해야 합니다.",
+        )
+
+
+class TermsAgreementFailedException(InternalServerException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="TERMS_AGREEMENT_FAILED",
+            message="서버 내부 오류가 발생했습니다.",
+        )

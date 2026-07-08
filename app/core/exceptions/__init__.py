@@ -24,6 +24,8 @@ __all__ = [
     "InternalServerException",
     "BadGatewayException",
     "ServiceUnavailableException",
+    "TermsNotFoundException",
+    "TermsLookupFailedException",
 
     # Auth Exceptions
     "UnsupportedProviderException",
@@ -63,6 +65,10 @@ __all__ = [
     "InvalidProfileImageUrlException",
     "ProfileImageUrlNotAllowedException",
     "ProfileUpdateFailedException",
+    "TermsAgreementRequestBodyMissingException",
+    "TermsAgreementFieldsMissingException",
+    "RequiredTermsNotAgreedException",
+    "TermsAgreementFailedException",
 
     # Recurring Schedule Exceptions
     "RecurringScheduleIdInvalidException",
