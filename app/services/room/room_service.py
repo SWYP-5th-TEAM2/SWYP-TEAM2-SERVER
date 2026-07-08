@@ -42,7 +42,7 @@ from app.core.exceptions import (
     UserNotFoundException,
     WithdrawnRoomUserException,
 )
-from app.models import RoomMember, RoomMemberRole, User
+from app.models import RoomMember, RoomMemberLeftReason, RoomMemberRole, User
 from app.models.user.enums import UserAccountStatus
 from app.repository.room import (
     count_active_places_by_room_id,
@@ -520,6 +520,7 @@ def leave_room(
                 room.deleted_at = left_at
 
         room_member.deleted_at = left_at
+        room_member.left_reason = RoomMemberLeftReason.LEFT
         db.commit()
     except AppException:
         db.rollback()
@@ -580,6 +581,7 @@ def kick_room_member(
             raise HostKickNotAllowedException()
 
         target_member.deleted_at = datetime.now(timezone.utc)
+        target_member.left_reason = RoomMemberLeftReason.KICKED
         db.commit()
     except AppException:
         db.rollback()
