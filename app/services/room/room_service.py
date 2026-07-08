@@ -31,6 +31,7 @@ from app.core.exceptions import (
     RoomMemberKickFailedException,
     RoomMemberNotFoundException,
     RoomMemberUserIdInvalidException,
+    RoomJoinForbiddenException,
     RoomNameInvalidException,
     RoomNameMissingException,
     RoomNameTooLongException,
@@ -291,20 +292,31 @@ def join_room_by_invite_code(
         if room is None:
             raise InviteCodeRoomNotFoundException()
 
-        existing_member = find_active_room_member(
+        existing_member = find_room_member(
             db=db,
             room_id=room.id,
             user_id=user_id,
         )
-        if existing_member is not None:
+
+        if existing_member is not None and existing_member.deleted_at is None:
             raise RoomAlreadyJoinedException()
 
-        # 초대 코드로 가입한 사용자는 항상 MEMBER로 생성
-        create_room_member(
-            db=db,
-            room_id=room.id,
-            user_id=user_id,
-        )
+        if existing_member is not None:
+            # 1. 탈퇴 회원은 접근 불가
+            if existing_member.left_reason == RoomMemberLeftReason.KICKED:
+                raise RoomJoinForbiddenException()
+
+            # 2. 직접 나간 사용자는 기존 RoomMember 복구, MEMBER로 가입
+            existing_member.deleted_at = None
+            existing_member.left_reason = None
+            existing_member.role = RoomMemberRole.MEMBER
+        else:
+            # 3. 초대 코드로 처음 가입한 사용자 생성
+            create_room_member(
+                db=db,
+                room_id=room.id,
+                user_id=user_id,
+            )
         joined_room_id = room.id
         db.commit()
 

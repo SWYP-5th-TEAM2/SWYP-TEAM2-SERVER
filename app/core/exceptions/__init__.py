@@ -118,6 +118,7 @@ __all__ = [
     "WithdrawnRoomUserException",
     "BlockedRoomUserException",
     "RoomAccessDeniedException",
+    "RoomJoinForbiddenException",
     "RoomNotFoundException",
     "InviteCodeRoomNotFoundException",
     "RoomAlreadyJoinedException",
