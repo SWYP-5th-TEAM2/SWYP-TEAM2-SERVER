@@ -1,5 +1,6 @@
 from app.repository.user.user_repository import *
 from app.repository.user.user_profile_repository import *
+from app.repository.user.term_repository import *
 from app.repository.user.user_withdrawal_repository import *
 
 
@@ -12,6 +13,7 @@ __all__ = [
     "demote_user_profile_images_except",
     "find_room_summaries_by_user_id",
     "count_recurring_schedule_groups_by_user_id",
+    "find_active_terms",
     "create_user_withdrawal_reasons",
     "mask_user_fcm_tokens",
     "soft_delete_user_related_records",

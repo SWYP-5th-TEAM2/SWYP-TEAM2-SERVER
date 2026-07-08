@@ -24,6 +24,8 @@ __all__ = [
     "InternalServerException",
     "BadGatewayException",
     "ServiceUnavailableException",
+    "TermsNotFoundException",
+    "TermsLookupFailedException",
 
     # Auth Exceptions
     "UnsupportedProviderException",
