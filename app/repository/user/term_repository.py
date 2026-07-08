@@ -1,7 +1,10 @@
+from datetime import datetime, timezone
+from uuid import UUID
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Term
+from app.models import Term, UserTermsAgreements
 
 
 def find_active_terms(db: Session) -> list[Term]:
@@ -15,3 +18,41 @@ def find_active_terms(db: Session) -> list[Term]:
     )
 
     return list(db.execute(stmt).scalars().all())
+
+
+def find_active_user_term_agreement_ids(
+    db: Session,
+    *,
+    user_id: UUID,
+    term_ids: list[UUID],
+) -> set[UUID]:
+    if not term_ids:
+        return set()
+
+    stmt = select(UserTermsAgreements.term_id).where(
+        UserTermsAgreements.user_id == user_id,
+        UserTermsAgreements.term_id.in_(term_ids),
+        UserTermsAgreements.revoked_at.is_(None),
+        UserTermsAgreements.deleted_at.is_(None),
+    )
+
+    return set(db.execute(stmt).scalars().all())
+
+
+def create_user_terms_agreements(
+    db: Session,
+    *,
+    user_id: UUID,
+    term_ids: list[UUID],
+) -> None:
+    agreed_at = datetime.now(timezone.utc)
+    db.add_all(
+        [
+            UserTermsAgreements(
+                user_id=user_id,
+                term_id=term_id,
+                agreed_at=agreed_at,
+            )
+            for term_id in term_ids
+        ]
+    )

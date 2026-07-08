@@ -65,6 +65,10 @@ __all__ = [
     "InvalidProfileImageUrlException",
     "ProfileImageUrlNotAllowedException",
     "ProfileUpdateFailedException",
+    "TermsAgreementRequestBodyMissingException",
+    "TermsAgreementFieldsMissingException",
+    "RequiredTermsNotAgreedException",
+    "TermsAgreementFailedException",
 
     # Recurring Schedule Exceptions
     "RecurringScheduleIdInvalidException",

@@ -14,6 +14,8 @@ __all__ = [
     "find_room_summaries_by_user_id",
     "count_recurring_schedule_groups_by_user_id",
     "find_active_terms",
+    "find_active_user_term_agreement_ids",
+    "create_user_terms_agreements",
     "create_user_withdrawal_reasons",
     "mask_user_fcm_tokens",
     "soft_delete_user_related_records",
