@@ -103,6 +103,14 @@ class RoomAccessDeniedException(ForbiddenException):
         )
 
 
+class RoomJoinForbiddenException(ForbiddenException):
+    def __init__(self) -> None:
+        super().__init__(
+            code="ROOM_JOIN_FORBIDDEN",
+            message="참여할 수 없는 방입니다.",
+        )
+
+
 class RoomNotFoundException(NotFoundException):
     def __init__(self) -> None:
         super().__init__(

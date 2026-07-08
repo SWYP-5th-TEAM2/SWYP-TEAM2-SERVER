@@ -6,7 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
 from app.models.mixins import TimestampMixin
-from app.models.room.enums import RoomMemberRole
+from app.models.room.enums import RoomMemberLeftReason, RoomMemberRole
 
 
 class RoomMember(Base, TimestampMixin):
@@ -45,4 +45,10 @@ class RoomMember(Base, TimestampMixin):
         default=RoomMemberRole.MEMBER,
         server_default=RoomMemberRole.MEMBER.value,
         comment="방 멤버 역할",
+    )
+
+    left_reason: Mapped[RoomMemberLeftReason | None] = mapped_column(
+        Enum(RoomMemberLeftReason, name="room_member_left_reason"),
+        nullable=True,
+        comment="방 나가기 사유",
     )
