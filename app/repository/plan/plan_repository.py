@@ -236,6 +236,25 @@ def find_plan_by_id_including_deleted(db: Session, *, plan_id: UUID) -> Plan | N
     return db.execute(stmt).scalar_one_or_none()
 
 
+def find_due_voting_plan_id_for_update(
+    db: Session,
+    *,
+    now: datetime,
+) -> UUID | None:
+    stmt = (
+        select(Plan.id)
+        .where(
+            Plan.status == PlanStatus.VOTING,
+            Plan.voting_ends_at <= now,
+            Plan.deleted_at.is_(None),
+        )
+        .order_by(Plan.voting_ends_at.asc(), Plan.id.asc())
+        .limit(1)
+        .with_for_update(skip_locked=True)
+    )
+    return db.execute(stmt).scalar_one_or_none()
+
+
 def find_plan_place_room_row(
     db: Session,
     *,
