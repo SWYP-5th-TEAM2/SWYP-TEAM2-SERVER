@@ -183,6 +183,14 @@ def find_image_by_url(
     return db.execute(stmt).scalar_one_or_none()
 
 
+def _has_valid_coordinates(latitude: float | None, longitude: float | None) -> bool:
+    if latitude is None or longitude is None:
+        return False
+    if latitude == 0.0 and longitude == 0.0:
+        return False
+    return True
+
+
 def exists_duplicate_place(
     db: Session,
     *,
@@ -195,6 +203,9 @@ def exists_duplicate_place(
     exclude_place_id: UUID | None = None,
 ) -> bool:
     duplicate_conditions = []
+    # link_url은 블로그/인스타/유튜브처럼 여러 장소를 포함할 수 있는 출처 URL일 수 있으므로
+    # 중복 판단 기준에서 제외한다.
+    _ = link_url
 
     if place_name and address:
         duplicate_conditions.append(
@@ -204,16 +215,14 @@ def exists_duplicate_place(
             )
         )
 
-    if latitude is not None and longitude is not None:
+    if place_name and not address and _has_valid_coordinates(latitude, longitude):
         duplicate_conditions.append(
             and_(
+                Place.name == place_name,
                 Place.latitude == latitude,
                 Place.longitude == longitude,
             )
         )
-
-    if link_url:
-        duplicate_conditions.append(Place.url == link_url)
 
     if not duplicate_conditions:
         return False
