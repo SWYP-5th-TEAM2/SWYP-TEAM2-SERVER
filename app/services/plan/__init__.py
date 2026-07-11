@@ -8,6 +8,7 @@ __all__ = [
     "send_pending_reminders",
     "send_pending_reminder_test",
     "close_plan",
+    "auto_close_due_plans_once",
     "get_plan_list",
     "get_invitation",
     "save_plan_response",

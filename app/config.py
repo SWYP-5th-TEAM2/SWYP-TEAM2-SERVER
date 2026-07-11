@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     firebase_project_id: str | None = Field(default=None, alias="FIREBASE_PROJECT_ID")
     firebase_credentials_path: str | None = Field(default=None, alias="FIREBASE_CREDENTIALS_PATH")
 
+    # ===== Plan Auto Close =====
+    auto_close_plan_enabled: bool = Field(default=True, alias="AUTO_CLOSE_PLAN_ENABLED")
+    auto_close_plan_interval_seconds: int = Field(default=60, gt=0, alias="AUTO_CLOSE_PLAN_INTERVAL_SECONDS")
+    auto_close_plan_batch_size: int = Field(default=50, gt=0, alias="AUTO_CLOSE_PLAN_BATCH_SIZE")
+
     # ===== Google OAuth =====
     google_client_id: str = Field(alias="GOOGLE_CLIENT_ID")
 

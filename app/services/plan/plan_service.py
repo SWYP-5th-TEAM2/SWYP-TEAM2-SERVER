@@ -61,6 +61,7 @@ from app.repository.plan import (
     create_notifications,
     create_plan_row,
     find_active_plan_for_place,
+    find_due_voting_plan_id_for_update,
     find_members_by_ids,
     find_place_in_room,
     find_plan_by_id_including_deleted,
@@ -1031,6 +1032,90 @@ def _build_ticket(plan: Plan, place: Place | None, participants: list[PlanUserPr
     )
 
 
+def _confirm_plan_and_dispatch_notifications(
+    db: Session,
+    *,
+    plan: Plan,
+    excluded_notification_user_id: UUID | None = None,
+) -> ClosePlanResponse:
+    votes = find_votes_by_plan_id(db=db, plan_id=plan.id)
+    # 응답한 참석자가 없어도 발의자 1인으로 약속을 확정할 수 있다.
+    # 아무도 응답하지 않았거나 모두 못 간다고 응답한 경우에도
+    # 약속이 마감되면 발의자만 포함한 티켓을 생성한다.
+    attending_user_ids = [vote.user_id for vote in votes if vote.is_attending]
+
+    participant_ids = []
+    if plan.creator_id is not None:
+        participant_ids.append(plan.creator_id)
+    participant_ids.extend(member_id for member_id in attending_user_ids if member_id not in participant_ids)
+    participant_rows = find_members_by_ids(db=db, user_ids=participant_ids)
+    participants = [_build_user_preview(*row) for row in participant_rows]
+
+    plan.status = PlanStatus.CONFIRMED
+    plan.confirmed_at = _now()
+    plan, place, _, _, _ = _get_plan_context(db=db, plan_id=plan.id)
+
+    notify_user_ids = [
+        participant.user_id
+        for participant in participants
+        if participant.user_id and participant.user_id != excluded_notification_user_id
+    ]
+    notification_title = "약속이 확정됐어요"
+    notification_content = f"{place.title if place else plan.name} 약속이 확정됐어요."
+    notifications = create_notifications(
+        db=db,
+        user_ids=notify_user_ids,
+        notification_type=NotificationType.PLAN_CONFIRMED,
+        title=notification_title,
+        content=notification_content,
+        target_type=NotificationTargetType.PLAN,
+        target_id=plan.id,
+    )
+    push_payloads = _build_push_payloads(
+        notifications=notifications,
+        title=notification_title,
+        body=notification_content,
+    )
+    db.flush()
+    db.commit()
+    push_summary = _to_push_summary(
+        dispatch_fcm_push_notifications(db=db, payloads=push_payloads)
+    )
+
+    return ClosePlanResponse(
+        plan_id=plan.id,
+        room_id=plan.room_id,
+        confirmed_at=plan.confirmed_at,
+        ticket=_build_ticket(plan, place, participants),
+        notification_created_count=len(notifications),
+        push_notification=push_summary,
+    )
+
+
+def auto_close_due_plans_once(db: Session, *, batch_size: int) -> int:
+    processed_count = 0
+    for _ in range(batch_size):
+        due_plan_id = find_due_voting_plan_id_for_update(db=db, now=_now())
+        if due_plan_id is None:
+            break
+
+        plan = find_plan_by_id_including_deleted(db=db, plan_id=due_plan_id)
+        if plan is None or plan.deleted_at is not None:
+            db.rollback()
+            continue
+        if plan.status != PlanStatus.VOTING or plan.voting_ends_at > _now():
+            db.rollback()
+            continue
+
+        _confirm_plan_and_dispatch_notifications(
+            db=db,
+            plan=plan,
+            excluded_notification_user_id=None,
+        )
+        processed_count += 1
+    return processed_count
+
+
 def close_plan(db: Session, *, user_id: UUID, plan_id: object) -> ClosePlanResponse:
     parsed_plan_id = _parse_plan_id(plan_id)
     try:
@@ -1041,53 +1126,10 @@ def close_plan(db: Session, *, user_id: UUID, plan_id: object) -> ClosePlanRespo
         if plan.status != PlanStatus.VOTING:
             raise PlanAlreadyClosedException()
 
-        votes = find_votes_by_plan_id(db=db, plan_id=plan.id)
-        # 응답한 참석자가 없어도 발의자 1인으로 약속을 확정할 수 있다.
-        # 기존에는 GOING 응답자가 없으면 409를 반환했지만, 최신 정책은
-        # 아무도 응답하지 않았거나 모두 못 간다고 응답한 경우에도
-        # 발의자가 약속을 마감하면 발의자만 포함한 티켓을 생성한다.
-        attending_user_ids = [vote.user_id for vote in votes if vote.is_attending]
-
-        participant_ids = []
-        if plan.creator_id is not None:
-            participant_ids.append(plan.creator_id)
-        participant_ids.extend(user_id for user_id in attending_user_ids if user_id not in participant_ids)
-        participant_rows = find_members_by_ids(db=db, user_ids=participant_ids)
-        participants = [_build_user_preview(*row) for row in participant_rows]
-
-        plan.status = PlanStatus.CONFIRMED
-        plan.confirmed_at = _now()
-        plan, place, _, _, _ = _get_plan_context(db=db, plan_id=plan.id)
-        notify_user_ids = [participant.user_id for participant in participants if participant.user_id and participant.user_id != user_id]
-        notification_title = "약속이 확정됐어요"
-        notification_content = f"{place.title if place else plan.name} 약속이 확정됐어요."
-        notifications = create_notifications(
+        return _confirm_plan_and_dispatch_notifications(
             db=db,
-            user_ids=notify_user_ids,
-            notification_type=NotificationType.PLAN_CONFIRMED,
-            title=notification_title,
-            content=notification_content,
-            target_type=NotificationTargetType.PLAN,
-            target_id=plan.id,
-        )
-        push_payloads = _build_push_payloads(
-            notifications=notifications,
-            title=notification_title,
-            body=notification_content,
-        )
-        db.flush()
-        db.commit()
-        push_summary = _to_push_summary(
-            dispatch_fcm_push_notifications(db=db, payloads=push_payloads)
-        )
-
-        return ClosePlanResponse(
-            plan_id=plan.id,
-            room_id=plan.room_id,
-            confirmed_at=plan.confirmed_at,
-            ticket=_build_ticket(plan, place, participants),
-            notification_created_count=len(notifications),
-            push_notification=push_summary,
+            plan=plan,
+            excluded_notification_user_id=user_id,
         )
     except (
         PlanCloseAccessDeniedException,
