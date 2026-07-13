@@ -25,5 +25,8 @@ node_exporter_container_name: mohaeng-node-exporter
 node_exporter_bind_address: "0.0.0.0"
 node_exporter_port: 9100
 
-# Grafana Alloy는 다음 단계에서 같은 monitoring_agent compose에 추가할 예정이다.
+alloy_image: grafana/alloy:v1.8.3
+alloy_container_name: mohaeng-alloy
 alloy_http_port: 12345
+monitoring_agent_host_label: mohaeng-app-vm # Loki 로그 출처 App VM 라벨
+alloy_loki_endpoint: "http://10.0.0.5:3100/loki/api/v1/push"

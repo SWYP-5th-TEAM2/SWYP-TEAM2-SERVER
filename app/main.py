@@ -6,6 +6,7 @@ from app.api.base.router import router as base_router
 from app.api.v1.router import router as v1_router
 from app.config import settings
 from app.core.exceptions.handlers import register_exception_handlers
+from app.core.metrics import PrometheusMetricsMiddleware, metrics_response
 from app.core.redis import connect_redis, close_redis
 
 
@@ -24,6 +25,8 @@ def create_app() -> FastAPI:
     )
 
     register_exception_handlers(app)
+    app.add_middleware(PrometheusMetricsMiddleware)
+    app.add_route("/metrics", metrics_response, methods=["GET"])
 
     app.include_router(
         base_router,

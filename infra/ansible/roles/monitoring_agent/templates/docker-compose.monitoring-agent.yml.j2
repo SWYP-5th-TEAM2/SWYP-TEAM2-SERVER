@@ -6,6 +6,7 @@ services:
     command:
       - "--path.rootfs=/host"
       - "--web.listen-address=:9100"
+      - "--collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|var/lib/docker/.+)($$|/)"
     pid: host
     read_only: true
     security_opt:
@@ -15,3 +16,22 @@ services:
 
     volumes:
       - "/:/host:ro,rslave"
+
+  alloy:
+    image: "{{ alloy_image }}"
+    container_name: "{{ alloy_container_name }}"
+    restart: unless-stopped
+    command:
+      - "run"
+      - "--server.http.listen-addr=0.0.0.0:{{ alloy_http_port }}"
+      - "--storage.path=/var/lib/alloy/data"
+      - "/etc/alloy/config.alloy"
+    ports:
+      - "127.0.0.1:{{ alloy_http_port }}:{{ alloy_http_port }}"
+    volumes:
+      - "{{ monitoring_agent_dir }}/config.alloy:/etc/alloy/config.alloy:ro"
+      - "/var/lib/docker/containers:/var/lib/docker/containers:ro"
+      - alloy_data:/var/lib/alloy/data
+
+volumes:
+  alloy_data:
