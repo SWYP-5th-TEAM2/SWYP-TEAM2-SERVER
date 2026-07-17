@@ -1,4 +1,13 @@
 from app.schemas.notification.response.notification import (
+    FcmDiagnosticAcceptedTokenResponse,
+    FcmDiagnosticActualSendSummaryResponse,
+    FcmDiagnosticDryRunSummaryResponse,
+    FcmDiagnosticFirebaseErrorResponse,
+    FcmDiagnosticFirebaseResponse,
+    FcmDiagnosticNotificationTypeResultResponse,
+    FcmDiagnosticResponse,
+    FcmDiagnosticTokenErrorResponse,
+    FcmDiagnosticUserResponse,
     NotificationInvitationPlaceResponse,
     NotificationListResponse,
     NotificationMemberResponse,
@@ -12,6 +21,15 @@ from app.schemas.notification.response.notification import (
 )
 
 __all__ = [
+    "FcmDiagnosticAcceptedTokenResponse",
+    "FcmDiagnosticActualSendSummaryResponse",
+    "FcmDiagnosticDryRunSummaryResponse",
+    "FcmDiagnosticFirebaseErrorResponse",
+    "FcmDiagnosticFirebaseResponse",
+    "FcmDiagnosticNotificationTypeResultResponse",
+    "FcmDiagnosticResponse",
+    "FcmDiagnosticTokenErrorResponse",
+    "FcmDiagnosticUserResponse",
     "NotificationInvitationPlaceResponse",
     "NotificationListResponse",
     "NotificationMemberResponse",

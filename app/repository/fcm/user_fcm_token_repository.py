@@ -73,6 +73,8 @@ def find_active_fcm_token_rows(
         conditions.append(User.vote_deadline_enabled.is_(True))
     elif notification_type == NotificationType.PLAN_CONFIRMED:
         conditions.append(User.schedule_confirmed_enabled.is_(True))
+    elif notification_type == NotificationType.QUIET_RECOMMENDATION:
+        conditions.append(User.quiet_recommendation_enabled.is_(True))
 
     stmt = select(
         UserFcmToken.user_id,
