@@ -67,6 +67,78 @@ class NotificationVoteScreenResponse(CamelModel):
     my_response_status: str
 
 
+class FcmDiagnosticUserResponse(CamelModel):
+    user_id: UUID
+    nickname: str | None
+    user_status: str
+    total_fcm_token_count: int
+    active_fcm_token_count: int
+
+
+class FcmDiagnosticFirebaseErrorResponse(CamelModel):
+    type: str
+    message: str
+
+
+class FcmDiagnosticFirebaseResponse(CamelModel):
+    status: str
+    project_id: str | None
+    credential_source: str
+    credential_type: str | None = None
+    error: FcmDiagnosticFirebaseErrorResponse | None = None
+
+
+class FcmDiagnosticDryRunSummaryResponse(CamelModel):
+    status: str
+    attempted_token_count: int
+    validated_count: int
+    failed_count: int
+
+
+class FcmDiagnosticAcceptedTokenResponse(CamelModel):
+    masked_token: str
+    message_id: str
+
+
+class FcmDiagnosticActualSendSummaryResponse(CamelModel):
+    status: str
+    attempted_token_count: int
+    accepted_count: int
+    failed_count: int
+    device_delivery_confirmed: bool = False
+    skipped_reason: str | None = None
+    accepted_tokens: list[FcmDiagnosticAcceptedTokenResponse] | None = None
+
+
+class FcmDiagnosticTokenErrorResponse(CamelModel):
+    stage: str
+    masked_token: str
+    device_type: str
+    error_code: str | None = None
+    error_type: str
+    error_message: str
+
+
+class FcmDiagnosticNotificationTypeResultResponse(CamelModel):
+    notification_type: str
+    setting_field: str | None = None
+    setting_enabled: bool
+    eligible_token_count: int
+    dry_run: FcmDiagnosticDryRunSummaryResponse
+    actual_send: FcmDiagnosticActualSendSummaryResponse | None = None
+    errors: list[FcmDiagnosticTokenErrorResponse] | None = None
+
+
+class FcmDiagnosticResponse(CamelModel):
+    request_id: UUID
+    attempted_at: datetime
+    notification_type: str
+    send_actual: bool
+    target_user: FcmDiagnosticUserResponse
+    firebase: FcmDiagnosticFirebaseResponse
+    notification_type_results: list[FcmDiagnosticNotificationTypeResultResponse]
+
+
 class NotificationReadResponse(CamelModel):
     notification_id: UUID
     is_read: bool
