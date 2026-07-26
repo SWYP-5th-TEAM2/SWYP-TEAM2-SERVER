@@ -77,31 +77,31 @@ class User(Base, TimestampMixin):
     candidate_place_enabled: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
-        default=False,
-        server_default="false",
+        default=True,
+        server_default="true",
         comment="딸깍 생성 알림 활성화 여부",
     )
 
     vote_deadline_enabled: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
-        default=False,
-        server_default="false",
+        default=True,
+        server_default="true",
         comment="투표 마감 알림 활성화 여부",
     )
 
     schedule_confirmed_enabled: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
-        default=False,
-        server_default="false",
+        default=True,
+        server_default="true",
         comment="일정 확정 알림 활성화 여부",
     )
 
     quiet_recommendation_enabled: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
-        default=False,
-        server_default="false",
+        default=True,
+        server_default="true",
         comment="일정 생성 권유 알림 활성화 여부",
     )
