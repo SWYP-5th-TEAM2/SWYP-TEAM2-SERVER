@@ -1,0 +1,50 @@
+---
+- name: Create monitoring agent directory # 모니터링 에이전트 디렉터리 생성
+  ansible.builtin.file:
+    path: "{{ monitoring_agent_dir }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0755"
+
+- name: Validate Loki endpoint # Alloy가 로그를 보낼 외부 Loki endpoint 설정 확인
+  ansible.builtin.assert:
+    that:
+      - alloy_loki_endpoint is defined
+      - alloy_loki_endpoint | length > 0
+      - "'CHANGE_ME' not in alloy_loki_endpoint"
+      - alloy_loki_endpoint is match('^https?://.+/loki/api/v1/push$')
+    fail_msg: >-
+      alloy_loki_endpoint 값을 실제 Loki push endpoint로 설정해야 합니다.
+      예: http://<loki-private-ip>:3100/loki/api/v1/push
+
+- name: Deploy monitoring agent compose file # 모니터링 에이전트 컨테이너 정의 배포
+  ansible.builtin.template:
+    src: docker-compose.monitoring-agent.yml.j2
+    dest: "{{ monitoring_agent_dir }}/docker-compose.yml"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"
+
+- name: Deploy Grafana Alloy config file # Grafana Alloy 설정 배포
+  ansible.builtin.template:
+    src: config.alloy.j2
+    dest: "{{ monitoring_agent_dir }}/config.alloy"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: "0644"
+
+- name: Pull monitoring agent images # 배포 전에 node exporter / Alloy 이미지 pull
+  community.docker.docker_compose_v2_pull:
+    project_src: "{{ monitoring_agent_dir }}"
+    services:
+      - node-exporter
+      - alloy
+
+- name: Start monitoring agent containers # Prometheus scrape와 Loki 로그 수집을 위한 에이전트 실행
+  community.docker.docker_compose_v2:
+    project_src: "{{ monitoring_agent_dir }}"
+    state: present
+    services:
+      - node-exporter
+      - alloy
