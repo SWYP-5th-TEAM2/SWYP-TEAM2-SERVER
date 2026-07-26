@@ -7,6 +7,9 @@ app_port: 8000
 
 nginx_server_name: api.mohaeng.cloud
 nginx_client_max_body_size: 20M
+# Monitoring VM private IP에서만 접근하도록 제한
+nginx_metrics_allowed_cidrs:
+  - "10.0.0.5/32"
 
 timezone: Asia/Seoul
 

@@ -17,6 +17,13 @@ REQUEST_LATENCY = Histogram(
     ["method", "path"],
 )
 
+# 트래픽 제외(/metrics, health check)
+EXCLUDED_METRIC_PATHS = {
+    "/metrics",
+    "/api/health",
+    "/api/health/db",
+}
+
 
 def _normalize_path(request: Request) -> str:
     route = request.scope.get("route")
@@ -32,13 +39,18 @@ class PrometheusMetricsMiddleware(BaseHTTPMiddleware):
         request: Request,
         call_next: RequestResponseEndpoint,
     ) -> Response:
+        # 내부 모니터링/헬스체크는 Prometheus metric에 기록하지 않는다.
+        if request.url.path in EXCLUDED_METRIC_PATHS:
+            return await call_next(request)
+
         start_time = time.perf_counter()
         method = request.method
-        path = _normalize_path(request)
 
         try:
             response = await call_next(request)
         except Exception:
+            # 예외도 500으로 집계
+            path = _normalize_path(request) # 요청
             REQUEST_COUNT.labels(
                 method=method,
                 path=path,
@@ -50,6 +62,7 @@ class PrometheusMetricsMiddleware(BaseHTTPMiddleware):
             ).observe(time.perf_counter() - start_time)
             raise
 
+        path = _normalize_path(request)
         REQUEST_COUNT.labels(
             method=method,
             path=path,

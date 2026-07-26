@@ -4,6 +4,23 @@ server {
 
     client_max_body_size {{ nginx_client_max_body_size }};
 
+    # HTTP에서도 /metrics는 Monitoring VM에서만 접근하도록 제한
+    location = /metrics {
+{% for cidr in nginx_metrics_allowed_cidrs | default([]) %}
+        allow {{ cidr }};
+{% endfor %}
+        deny all;
+
+        proxy_pass http://127.0.0.1:{{ app_port }};
+
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # 서비스 API 요청은 기존처럼 FastAPI 컨테이너로 프록시한다.
     location / {
         proxy_pass http://127.0.0.1:{{ app_port }};
 
