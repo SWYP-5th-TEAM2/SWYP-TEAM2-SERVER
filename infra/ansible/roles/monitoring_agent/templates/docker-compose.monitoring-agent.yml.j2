@@ -5,14 +5,13 @@ services:
     restart: unless-stopped
     command:
       - "--path.rootfs=/host"
-      - "--web.listen-address=:9100"
+      - "--web.listen-address=:{{ node_exporter_port }}"
       - "--collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|var/lib/docker/.+)($$|/)"
+    network_mode: host
     pid: host
     read_only: true
     security_opt:
       - "no-new-privileges:true"
-    ports:
-      - "{{ node_exporter_bind_address }}:{{ node_exporter_port }}:9100"
 
     volumes:
       - "/:/host:ro,rslave"
