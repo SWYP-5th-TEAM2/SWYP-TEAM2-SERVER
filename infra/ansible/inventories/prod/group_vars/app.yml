@@ -7,6 +7,9 @@ app_port: 8000
 
 nginx_server_name: api.mohaeng.cloud
 nginx_client_max_body_size: 20M
+# Monitoring VM private IP에서만 접근하도록 제한
+nginx_metrics_allowed_cidrs:
+  - "10.0.0.5/32"
 
 timezone: Asia/Seoul
 
@@ -15,3 +18,16 @@ certbot_email: "wldnjstj99@gmail.com"
 
 acr_name: mohaengacr
 acr_login_server: mohaengacr-a9cfdnd5e7c3gefw.azurecr.io
+
+# 모니터링 에이전트
+monitoring_agent_dir: /opt/mohaeng-monitoring-agent
+
+node_exporter_image: prom/node-exporter:v1.8.2
+node_exporter_container_name: mohaeng-node-exporter
+node_exporter_port: 9100
+
+alloy_image: grafana/alloy:v1.8.3
+alloy_container_name: mohaeng-alloy
+alloy_http_port: 12345
+monitoring_agent_host_label: mohaeng-app-vm # Loki 로그 출처 App VM 라벨
+alloy_loki_endpoint: "http://10.0.0.5:3100/loki/api/v1/push"
