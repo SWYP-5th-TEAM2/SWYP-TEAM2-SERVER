@@ -1,4 +1,6 @@
 import time
+from collections.abc import Callable
+from typing import Any
 
 from fastapi import Request, Response
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
@@ -25,21 +27,54 @@ EXCLUDED_METRIC_PATHS = {
 }
 
 
+def _join_route_paths(prefix: str, path: str) -> str:
+    if path == "/":
+        return f"{prefix.rstrip('/')}/" if prefix else "/"
+    if not prefix:
+        return path
+    return f"{prefix.rstrip('/')}/{path.lstrip('/')}"
+
+
+def _build_route_template_map(
+    routes: list[Any],
+    prefix: str = "",
+) -> dict[Callable[..., Any], str]:
+    route_templates: dict[Callable[..., Any], str] = {}
+
+    for route in routes:
+        original_router = getattr(route, "original_router", None)
+        include_context = getattr(route, "include_context", None)
+        if original_router is not None and include_context is not None:
+            included_prefix = getattr(include_context, "prefix", "")
+            nested_prefix = _join_route_paths(prefix, included_prefix)
+            route_templates.update(
+                _build_route_template_map(original_router.routes, nested_prefix),
+            )
+            continue
+
+        endpoint = getattr(route, "endpoint", None)
+        route_path = getattr(route, "path", None)
+        if endpoint is not None and isinstance(route_path, str):
+            route_templates[endpoint] = _join_route_paths(prefix, route_path)
+
+    return route_templates
+
+
+def _get_route_template(request: Request) -> str | None:
+    route_templates = getattr(request.app.state, "route_templates", None)
+    if route_templates is None:
+        route_templates = _build_route_template_map(request.app.routes)
+        request.app.state.route_templates = route_templates
+
+    endpoint = request.scope.get("endpoint")
+    return route_templates.get(endpoint)
+
+
 def _normalize_path(request: Request) -> str:
-    path = request.url.path
-    route = request.scope.get("route")
-    route_path = getattr(route, "path", None)
-    if not isinstance(route_path, str):
-        return path
-
-    path_segments = path.strip("/").split("/")
-    route_segments = route_path.strip("/").split("/")
-    if not route_segments or len(route_segments) > len(path_segments):
-        return path
-
-    prefix_segments = path_segments[: len(path_segments) - len(route_segments)]
-    normalized_segments = [*prefix_segments, *route_segments]
-    return "/" + "/".join(normalized_segments)
+    route_template = _get_route_template(request)
+    if route_template is not None:
+        return route_template
+    return request.url.path
 
 
 class PrometheusMetricsMiddleware(BaseHTTPMiddleware):
