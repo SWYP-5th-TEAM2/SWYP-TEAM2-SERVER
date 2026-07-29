@@ -26,11 +26,20 @@ EXCLUDED_METRIC_PATHS = {
 
 
 def _normalize_path(request: Request) -> str:
+    path = request.url.path
     route = request.scope.get("route")
-    path = getattr(route, "path", None)
-    if isinstance(path, str):
+    route_path = getattr(route, "path", None)
+    if not isinstance(route_path, str):
         return path
-    return request.url.path
+
+    path_segments = path.strip("/").split("/")
+    route_segments = route_path.strip("/").split("/")
+    if not route_segments or len(route_segments) > len(path_segments):
+        return path
+
+    prefix_segments = path_segments[: len(path_segments) - len(route_segments)]
+    normalized_segments = [*prefix_segments, *route_segments]
+    return "/" + "/".join(normalized_segments)
 
 
 class PrometheusMetricsMiddleware(BaseHTTPMiddleware):
