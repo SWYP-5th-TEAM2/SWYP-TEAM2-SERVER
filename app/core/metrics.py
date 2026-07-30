@@ -3,9 +3,18 @@ from collections.abc import Callable
 from typing import Any
 
 from fastapi import Request, Response
-from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
+from prometheus_client import (
+    CONTENT_TYPE_LATEST,
+    Counter,
+    Gauge,
+    Histogram,
+    generate_latest,
+)
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
+from app.database.session import engine
 
 REQUEST_COUNT = Counter(
     "fastapi_http_requests_total",
@@ -17,6 +26,11 @@ REQUEST_LATENCY = Histogram(
     "fastapi_http_request_duration_seconds",
     "HTTP request latency in seconds.",
     ["method", "path"],
+)
+
+DB_CONNECTION_UP = Gauge(
+    "fastapi_db_connection_up",
+    "Whether the FastAPI application can connect to the database.",
 )
 
 # 트래픽 제외(/metrics, health check)
@@ -77,6 +91,16 @@ def _normalize_path(request: Request) -> str:
     return request.url.path
 
 
+def _update_db_connection_metric() -> None:
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except SQLAlchemyError:
+        DB_CONNECTION_UP.set(0)
+    else:
+        DB_CONNECTION_UP.set(1)
+
+
 class PrometheusMetricsMiddleware(BaseHTTPMiddleware):
     async def dispatch(
         self,
@@ -94,7 +118,7 @@ class PrometheusMetricsMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
         except Exception:
             # 예외도 500으로 집계
-            path = _normalize_path(request) # 요청
+            path = _normalize_path(request)  # 요청
             REQUEST_COUNT.labels(
                 method=method,
                 path=path,
@@ -120,6 +144,8 @@ class PrometheusMetricsMiddleware(BaseHTTPMiddleware):
 
 
 def metrics_response(request: Request) -> Response:
+    _update_db_connection_metric()
+
     return Response(
         content=generate_latest(),
         media_type=CONTENT_TYPE_LATEST,
