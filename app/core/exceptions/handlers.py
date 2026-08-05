@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
@@ -7,6 +9,29 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.core.exceptions.base import AppException
 from app.core.responses import error_response
 
+logger = logging.getLogger(__name__)
+
+
+def _log_server_exception(
+    request: Request,
+    exc: Exception,
+    *,
+    status_code: int,
+    error_code: str,
+) -> None:
+    logger.error(
+        (
+            "Server request failed method=%s path=%s status_code=%s "
+            "error_code=%s error_type=%s"
+        ),
+        request.method,
+        request.url.path,
+        status_code,
+        error_code,
+        type(exc).__name__,
+        exc_info=(type(exc), exc, exc.__traceback__),
+    )
+
 
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppException)
@@ -14,6 +39,14 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request,
         exc: AppException,
     ) -> JSONResponse:
+        if exc.status_code >= 500:
+            _log_server_exception(
+                request,
+                exc,
+                status_code=exc.status_code,
+                error_code=exc.code,
+            )
+
         return JSONResponse(
             status_code=exc.status_code,
             content=error_response(
@@ -50,6 +83,14 @@ def register_exception_handlers(app: FastAPI) -> None:
             else "HTTP 요청 처리 중 오류가 발생했습니다."
         )
 
+        if exc.status_code >= 500:
+            _log_server_exception(
+                request,
+                exc,
+                status_code=exc.status_code,
+                error_code="HTTP_ERROR",
+            )
+
         return JSONResponse(
             status_code=exc.status_code,
             content=error_response(
@@ -65,6 +106,13 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request,
         exc: Exception,
     ) -> JSONResponse:
+        _log_server_exception(
+            request,
+            exc,
+            status_code=500,
+            error_code="INTERNAL_SERVER_ERROR",
+        )
+
         return JSONResponse(
             status_code=500,
             content=error_response(
